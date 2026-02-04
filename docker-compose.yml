@@ -1,0 +1,55 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: vapor
+      POSTGRES_PASSWORD: vapor
+      POSTGRES_DB: vapor
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vapor -d vapor"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://vapor:vapor@db:5432/vapor
+      APP_ADDR: 0.0.0.0:3000
+      TRUST_PROXY: "false"
+      COOKIE_SECURE: "false"
+      LOG_DIR: /app/logs
+      LOG_FILE: vapor.log
+      LOG_MAX_BYTES: "104857600"
+      LOG_MAX_FILES: "5"
+    ports:
+      - "3000:3000"
+    volumes:
+      - app_logs:/app/logs
+
+  purger:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://vapor:vapor@db:5432/vapor
+      LOG_DIR: /app/logs
+      LOG_FILE: vapor-purger.log
+      LOG_MAX_BYTES: "104857600"
+      LOG_MAX_FILES: "5"
+      PURGE_INTERVAL_SECONDS: "3600"
+    command: ["/app/vapor", "purge-loop"]
+    volumes:
+      - app_logs:/app/logs
+    restart: unless-stopped
+
+volumes:
+  db_data:
+  app_logs:
+
