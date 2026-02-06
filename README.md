@@ -36,8 +36,15 @@ Au démarrage, les migrations SQL dans `migrations/` sont appliquées automatiqu
 
 ## Pages
 
-- Entrée: `GET /` puis `POST /set`
-- Récupération: `GET /get` puis `POST /get`
+- **Page unique (UI)**: `GET /` et `GET /get` affichent la même interface (3 sections)
+- **Section 1 (toujours affichée)**: formulaire **GET** (`POST /get`) + (optionnel) résultat / message
+  - Résultat d’un **GET** (valeur + bouton **copier**)
+  - Message **OK** après un **SET** réussi
+  - Message **Non trouvé** si la clé est inconnue ou expirée
+- **Section 3 (toujours affichée)**: formulaire **SET** (`POST /set`)
+- **Option éphémère**: “EVAPORATING CONTENT” affiche un tooltip: “Content will be evaporated after the first reading”.
+- **Masquage du résultat**: quand une valeur est trouvée, la réponse affiche `*******` par défaut. Une icône “œil” permet d’afficher/masquer la valeur, et l’icône “copier” copie toujours la vraie valeur.
+- **Sauts de ligne**: l’affichage et la copie conservent les retours à la ligne du contenu stocké.
 
 ## Purge
 

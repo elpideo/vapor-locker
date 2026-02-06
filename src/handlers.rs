@@ -35,11 +35,7 @@ pub async fn get_set_form(
         .issue_token(&cookies)
         .map_err(internal_error)?;
 
-    Ok(Html(render_set_form(
-        &state.csrf.field_name,
-        &token,
-        None,
-    )))
+    Ok(Html(render_app_page(&state.csrf.field_name, &token, None)))
 }
 
 pub async fn post_set(
@@ -57,7 +53,15 @@ pub async fn post_set(
 
     let ip = client_ip(&headers, addr, state.trust_proxy);
     if state.ip_cache.seen_recently(ip) {
-        return Ok(Html(render_set_ok()));
+        let token = state
+            .csrf
+            .issue_token(&cookies)
+            .map_err(internal_error)?;
+        return Ok(Html(render_app_page(
+            &state.csrf.field_name,
+            &token,
+            Some(ResultBlock::Message("OK".to_string())),
+        )));
     }
 
     let key = form.key.unwrap_or_default();
@@ -72,10 +76,10 @@ pub async fn post_set(
     .validate()
     .map_err(|e| {
         let msg = format!("Validation error: {e}");
-        Html(render_set_form(
+        Html(render_app_page(
             &state.csrf.field_name,
             &state.csrf.issue_token(&cookies).unwrap_or_default(),
-            Some(&msg),
+            Some(ResultBlock::Message(msg)),
         ))
         .into_response()
     })?;
@@ -95,7 +99,15 @@ pub async fn post_set(
         .await
         .map_err(internal_error)?;
 
-    Ok(Html(render_set_ok()))
+    let token = state
+        .csrf
+        .issue_token(&cookies)
+        .map_err(internal_error)?;
+    Ok(Html(render_app_page(
+        &state.csrf.field_name,
+        &token,
+        Some(ResultBlock::Message("OK".to_string())),
+    )))
 }
 
 pub async fn get_get_form(
@@ -106,11 +118,7 @@ pub async fn get_get_form(
         .csrf
         .issue_token(&cookies)
         .map_err(internal_error)?;
-    Ok(Html(render_get_form(
-        &state.csrf.field_name,
-        &token,
-        None,
-    )))
+    Ok(Html(render_app_page(&state.csrf.field_name, &token, None)))
 }
 
 pub async fn post_get(
@@ -131,10 +139,10 @@ pub async fn post_get(
     info!(event = "get", ip = %ip);
 
     if state.ip_cache.seen_recently(ip) {
-        return Ok(Html(render_get_result(
+        return Ok(Html(render_app_page(
             &state.csrf.field_name,
             &state.csrf.issue_token(&cookies).unwrap_or_default(),
-            None,
+            Some(ResultBlock::Message("Not found".to_string())),
         )));
     }
 
@@ -143,10 +151,10 @@ pub async fn post_get(
         .validate()
         .map_err(|e| {
             let msg = format!("Validation error: {e}");
-            Html(render_get_form(
+            Html(render_app_page(
                 &state.csrf.field_name,
                 &state.csrf.issue_token(&cookies).unwrap_or_default(),
-                Some(&msg),
+                Some(ResultBlock::Message(msg)),
             ))
             .into_response()
         })?;
@@ -161,11 +169,11 @@ pub async fn post_get(
         .csrf
         .issue_token(&cookies)
         .map_err(internal_error)?;
-    Ok(Html(render_get_result(
-        &state.csrf.field_name,
-        &token,
-        value.as_deref(),
-    )))
+    let result = match value {
+        Some(v) => Some(ResultBlock::Value(v)),
+        None => Some(ResultBlock::Message("Non trouvé".to_string())),
+    };
+    Ok(Html(render_app_page(&state.csrf.field_name, &token, result)))
 }
 
 fn client_ip(headers: &HeaderMap, addr: SocketAddr, trust_proxy: bool) -> IpAddr {
@@ -193,29 +201,185 @@ fn base_page(title: &str, body: &str) -> String {
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>{title}</title>
+  <meta name="color-scheme" content="dark"/>
   <style>
-    body{{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;max-width:860px;margin:40px auto;padding:0 16px;}}
-    header{{display:flex;gap:16px;align-items:center;justify-content:space-between;margin-bottom:24px;}}
-    nav a{{margin-right:12px;}}
-    label{{display:block;margin:12px 0 6px;font-weight:600;}}
-    input[type=text], textarea{{width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;}}
-    textarea{{min-height:220px;}}
-    .row{{display:flex;gap:12px;align-items:center;}}
-    .btn{{margin-top:16px;padding:10px 16px;border-radius:10px;border:1px solid #111;background:#111;color:#fff;cursor:pointer;}}
-    .msg{{margin:12px 0;padding:10px 12px;border-radius:10px;background:#f6f6f6;border:1px solid #e4e4e4;}}
-    .value{{white-space:pre-wrap;border:1px solid #ddd;border-radius:10px;padding:12px;background:#fafafa;}}
-    code{{background:#f1f1f1;padding:2px 6px;border-radius:6px;}}
+    :root{{
+      --bg0:#07080a;
+      --bg1:#0b0c0f;
+      --card:#13151a;
+      --card2:#101217;
+      --border:#222631;
+      --muted:#9aa3b2;
+      --text:#e8ecf3;
+      --field:#1a1d24;
+      --fieldBorder:#2a2f3c;
+      --accent:#68ffb6;
+      --accentText:#07110b;
+      --shadow:0 18px 50px rgba(0,0,0,.55);
+      --radius:18px;
+    }}
+    *{{box-sizing:border-box;}}
+    html,body{{height:100%;}}
+    body{{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(900px 560px at 20% -10%, rgba(104,255,182,.10), transparent 60%),
+        radial-gradient(800px 520px at 100% 0%, rgba(104,255,182,.06), transparent 58%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+    }}
+    .wrap{{max-width:720px;margin:0 auto;padding:56px 18px 56px;}}
+    .brand{{
+      font-weight:800;
+      letter-spacing:.06em;
+      font-size:46px;
+      line-height:1.05;
+    }}
+    .brandDot{{color:var(--accent);}}
+
+    .stack{{display:flex;flex-direction:column;gap:18px;}}
+    .card{{
+      background: linear-gradient(180deg, rgba(19,21,26,1), rgba(15,17,22,1));
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      box-shadow: var(--shadow);
+      padding:18px;
+    }}
+    .cardTitle{{
+      font-weight:800;
+      letter-spacing:.18em;
+      color:var(--accent);
+      font-size:14px;
+      margin-bottom:14px;
+    }}
+    .fieldRow{{display:flex;gap:12px;align-items:center;}}
+    .fieldCol{{display:flex;flex-direction:column;gap:12px;}}
+    input[type=text], textarea{{
+      width:100%;
+      background:var(--field);
+      color:var(--text);
+      border:1px solid var(--fieldBorder);
+      border-radius:14px;
+      padding:14px 14px;
+      outline:none;
+    }}
+    input[type=text]{{height:52px;}}
+    textarea{{min-height:140px;resize:vertical;}}
+    input[type=text]::placeholder, textarea::placeholder{{color:rgba(154,163,178,.65);}}
+    input[type=text]:focus, textarea:focus{{border-color:rgba(104,255,182,.55);box-shadow:0 0 0 4px rgba(104,255,182,.10);}}
+
+    .actionBtn{{
+      flex:0 0 auto;
+      width:52px;height:52px;
+      border-radius:14px;
+      border:0;
+      background:var(--accent);
+      color:var(--accentText);
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      box-shadow: 0 14px 30px rgba(104,255,182,.18);
+      transition: transform .08s ease, filter .08s ease;
+    }}
+    .actionBtn:active{{transform: translateY(1px);filter:brightness(.95);}}
+    .icon{{width:22px;height:22px;display:block;}}
+
+    .resultSurface{{
+      position:relative;
+      background:var(--card2);
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:14px 44px 14px 14px;
+      min-height:56px;
+    }}
+    .resultText{{
+      margin:0;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, \"Liberation Mono\", \"Courier New\", monospace;
+      font-size:14px;
+      line-height:1.45;
+      white-space:pre-wrap;
+      word-break:break-word;
+      color:rgba(232,236,243,.86);
+    }}
+    .copyBtn{{
+      position:absolute;
+      top:10px;right:10px;
+      width:32px;height:32px;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,.08);
+      background: rgba(255,255,255,.04);
+      color: rgba(232,236,243,.85);
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }}
+    .copyBtn:active{{transform: translateY(1px);}}
+    .copyBtn.copied{{background: rgba(104,255,182,.16);border-color: rgba(104,255,182,.30);color: var(--accent);}}
+
+    .divider{{
+      height:1px;
+      margin:6px 10px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.12), transparent);
+      border-radius:999px;
+    }}
+
+    .pill{{
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      padding:10px 14px;
+      border-radius:999px;
+      background: rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.10);
+      color: rgba(232,236,243,.9);
+      font-weight:650;
+    }}
+    .muted{{color:var(--muted);font-weight:550;}}
+    .rowBetween{{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;}}
+    .check{{display:inline-flex;align-items:center;gap:10px;color:rgba(232,236,243,.86);}}
+    .check input{{width:16px;height:16px;}}
+    .srOnly{{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}}
   </style>
 </head>
 <body>
-  <header>
-    <div><strong>Vapor</strong> — KV éphémère</div>
-    <nav>
-      <a href="/">Entrée</a>
-      <a href="/get">Récupération</a>
-    </nav>
-  </header>
-  {body}
+  <main class="wrap">
+    {body}
+  </main>
+  <script>
+    (function () {{
+      function copyText(text) {{
+        if (navigator && navigator.clipboard && navigator.clipboard.writeText) {{
+          return navigator.clipboard.writeText(text);
+        }}
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'absolute';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        try {{ document.execCommand('copy'); }} catch (e) {{}}
+        document.body.removeChild(ta);
+        return Promise.resolve();
+      }}
+
+      var btn = document.querySelector('[data-copy-target]');
+      if (!btn) return;
+      btn.addEventListener('click', function () {{
+        var id = btn.getAttribute('data-copy-target');
+        var el = document.getElementById(id);
+        if (!el) return;
+        var text = (el.innerText || el.textContent || '').trimEnd();
+        copyText(text).then(function () {{
+          btn.classList.add('copied');
+          window.setTimeout(function () {{ btn.classList.remove('copied'); }}, 900);
+        }});
+      }});
+    }})();
+  </script>
 </body>
 </html>
 "#,
@@ -224,90 +388,101 @@ fn base_page(title: &str, body: &str) -> String {
     )
 }
 
-fn render_set_form(csrf_field: &str, token: &str, message: Option<&str>) -> String {
-    let msg = message
-        .map(|m| format!(r#"<div class="msg">{}</div>"#, html_escape(m)))
-        .unwrap_or_default();
-    base_page(
-        "Entrée",
-        &format!(
-            r#"
-{msg}
-<form method="post" action="/set">
-  {csrf}
-  <label for="key">key (max 255)</label>
-  <input id="key" name="key" type="text" maxlength="255" />
+#[derive(Debug, Clone)]
+enum ResultBlock {
+    Message(String),
+    Value(String),
+}
 
-  <label for="value">valeur (max 100000)</label>
-  <textarea id="value" name="value" maxlength="100000"></textarea>
+fn arrow_icon() -> &'static str {
+    r#"<svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+  <path d="M5 12h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <path d="M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>"#
+}
 
-  <div class="row">
-    <input id="ephemeral" name="ephemeral" type="checkbox" />
-    <label for="ephemeral" style="margin:0;font-weight:500;">éphémère (supprimé à la lecture)</label>
-  </div>
+fn copy_icon() -> &'static str {
+    r#"<svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+  <path d="M9 9h10v10H9V9Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+</svg>"#
+}
 
-  <button class="btn" type="submit">Valider</button>
-</form>
-"#,
-            msg = msg,
-            csrf = csrf::hidden_input(csrf_field, token)
+fn render_app_page(csrf_field: &str, token: &str, result: Option<ResultBlock>) -> String {
+    let result_block = match result {
+        None => String::new(),
+        Some(ResultBlock::Message(m)) => format!(
+            r#"<div class="resultSurface" style="margin-top:14px;">
+  <div class="pill">{}</div>
+</div>"#,
+            html_escape(&m)
         ),
-    )
-}
-
-fn render_set_ok() -> String {
-    base_page(
-        "OK",
-        r#"<div class="msg">OK</div><p>Tu peux récupérer via <code>/get</code>.</p>"#,
-    )
-}
-
-fn render_get_form(csrf_field: &str, token: &str, message: Option<&str>) -> String {
-    let msg = message
-        .map(|m| format!(r#"<div class="msg">{}</div>"#, html_escape(m)))
-        .unwrap_or_default();
-    base_page(
-        "Récupération",
-        &format!(
-            r#"
-{msg}
-<form method="post" action="/get">
-  {csrf}
-  <label for="key">key</label>
-  <input id="key" name="key" type="text" maxlength="255" />
-  <button class="btn" type="submit">Valider</button>
-</form>
-"#,
-            msg = msg,
-            csrf = csrf::hidden_input(csrf_field, token)
-        ),
-    )
-}
-
-fn render_get_result(csrf_field: &str, token: &str, value: Option<&str>) -> String {
-    let content = match value {
-        None => r#"<div class="msg">non trouvé</div>"#.to_string(),
-        Some(v) => format!(
-            r#"<div class="msg">trouvé</div><div class="value">{}</div>"#,
-            html_escape(v)
+        Some(ResultBlock::Value(v)) => format!(
+            r#"<div class="resultSurface" style="margin-top:14px;">
+  <pre id="resultValue" class="resultText">{}</pre>
+  <button class="copyBtn" type="button" data-copy-target="resultValue" aria-label="Copier">
+    {}
+    <span class="srOnly">Copier</span>
+  </button>
+</div>"#,
+            html_escape(&v),
+            copy_icon()
         ),
     };
 
+    let get_section = format!(
+        r#"<section class="card">
+  <div class="cardTitle">RETRIEVE</div>
+  <form method="post" action="/get" class="fieldRow">
+    {csrf}
+    <label class="srOnly" for="get_key">Key</label>
+    <input id="get_key" name="key" type="text" maxlength="255" placeholder="Key" autocomplete="off"/>
+    <button class="actionBtn" type="submit" aria-label="Get">{arrow}</button>
+  </form>
+  {result_block}
+</section>"#,
+        csrf = csrf::hidden_input(csrf_field, token),
+        arrow = arrow_icon(),
+        result_block = result_block
+    );
+
+    let set_section = format!(
+        r#"<section class="card">
+  <div class="cardTitle">STORE</div>
+  <form method="post" action="/set" class="fieldCol">
+    {csrf}
+    <label class="srOnly" for="set_key">Key</label>
+    <input id="set_key" name="key" type="text" maxlength="255" placeholder="Key" autocomplete="off"/>
+
+    <label class="srOnly" for="set_value">Value</label>
+    <textarea id="set_value" name="value" maxlength="100000" placeholder="Content or Secret"></textarea>
+
+    <div class="rowBetween">
+      <label class="check">
+        <input id="ephemeral" name="ephemeral" type="checkbox"/>
+        <span class="muted" title="Content will be evaporated after the first reading">🌬️ EVAPORATING CONTENT</span>
+      </label>
+      <button class="actionBtn" type="submit" aria-label="Set">{arrow}</button>
+    </div>
+  </form>
+</section>"#,
+        csrf = csrf::hidden_input(csrf_field, token),
+        arrow = arrow_icon()
+    );
+
     base_page(
-        "Résultat",
+        "Vapor",
         &format!(
-            r#"
-{content}
-<hr style="margin:24px 0;border:none;border-top:1px solid #eee;"/>
-<form method="post" action="/get">
-  {csrf}
-  <label for="key">key</label>
-  <input id="key" name="key" type="text" maxlength="255" />
-  <button class="btn" type="submit">Rechercher</button>
-</form>
-"#,
-            content = content,
-            csrf = csrf::hidden_input(csrf_field, token)
+            r#"<div class="stack">
+  <header>
+    <div class="brand">VAPOR<span class="brandDot">-</span>LOCKER</div>
+  </header>
+  {get_section}
+  <div class="divider" aria-hidden="true"></div>
+  {set_section}
+</div>"#,
+            get_section = get_section,
+            set_section = set_section
         ),
     )
 }
