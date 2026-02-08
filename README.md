@@ -2,6 +2,10 @@
 
 Service web (Rust + Axum) de stockage clé‑valeur avec récupération, durée de vie de 24h, option **éphémère** (suppression à la lecture), CSRF, anti‑attaque via cache IP (3s) et logs JSON rotatifs.
 
+## Documentation du code
+
+- Voir `docs/SRC_OVERVIEW.md` (structure + types + fonctions de `src/main.rs`, `src/handlers.rs`, `src/db.rs`)
+
 ## Prérequis
 
 - Rust stable (toolchain 2021)

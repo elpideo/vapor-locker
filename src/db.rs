@@ -5,11 +5,13 @@ use rand::RngCore;
 use sqlx::{postgres::PgPoolOptions, PgPool};
 use time::OffsetDateTime;
 
+/// Accès PostgreSQL (pool `sqlx`) et opérations applicatives (entries, salts, purge).
 #[derive(Clone)]
 pub struct Db {
     pool: PgPool,
 }
 
+/// Ligne matérialisée lors d’un `SELECT` d’entrée (avec id pour suppression éventuelle).
 #[derive(Debug, sqlx::FromRow)]
 struct FoundRow {
     id: i64,
@@ -17,12 +19,14 @@ struct FoundRow {
     ephemeral: bool,
 }
 
+/// Ligne matérialisée lors d’un `SELECT` de sels.
 #[derive(Debug, sqlx::FromRow)]
 struct SaltRow {
     salt: Vec<u8>,
     created_at: OffsetDateTime,
 }
 
+/// Statistiques de purge retournées à la CLI (serveur / purge).
 #[derive(Debug, Clone, Copy)]
 pub struct PurgeStats {
     pub entries_deleted: u64,
@@ -30,6 +34,10 @@ pub struct PurgeStats {
 }
 
 impl Db {
+    /// Connecte la base depuis les variables d’environnement.
+    ///
+    /// - `DATABASE_URL` (requis)
+    /// - `DB_MAX_CONNECTIONS` (optionnel, défaut 10)
     pub async fn connect_from_env() -> anyhow::Result<Self> {
         let database_url = std::env::var("DATABASE_URL").context("DATABASE_URL missing")?;
         let max_connections: u32 = std::env::var("DB_MAX_CONNECTIONS")
@@ -47,6 +55,7 @@ impl Db {
         Ok(Self { pool })
     }
 
+    /// Exécute les migrations `sqlx` depuis `./migrations`.
     pub async fn migrate(&self) -> anyhow::Result<()> {
         sqlx::migrate!("./migrations")
             .run(&self.pool)
@@ -55,6 +64,9 @@ impl Db {
         Ok(())
     }
 
+    /// Insère une nouvelle entrée.
+    ///
+    /// `value` est stockée telle quelle (payload chiffré sérialisé en JSON).
     pub async fn insert(&self, key_hash: &str, value: &str, ephemeral: bool) -> anyhow::Result<()> {
         sqlx::query(
             r#"
@@ -116,6 +128,9 @@ impl Db {
         Ok(Some(row.value))
     }
 
+    /// Retourne les sels valides et en crée un nouveau si nécessaire (rotation ~1h).
+    ///
+    /// Les sels sont considérés valides pendant ~25h afin de couvrir une fenêtre de dérivation côté client.
     pub async fn list_valid_salts_with_rotation(&self) -> anyhow::Result<Vec<Vec<u8>>> {
         // Ensure there's a recent salt (rotation ~1h).
         let now = OffsetDateTime::now_utc();
@@ -166,6 +181,7 @@ impl Db {
         Ok(rows.into_iter().map(|r| r.salt).collect())
     }
 
+    /// Purge les entrées expirées (24h) et les sels expirés (25h).
     pub async fn purge_expired(&self) -> anyhow::Result<PurgeStats> {
         let entries_res = sqlx::query(
             r#"

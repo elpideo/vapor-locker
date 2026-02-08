@@ -19,6 +19,7 @@ use tower_cookies::CookieManagerLayer;
 use tower_http::services::{ServeDir, ServeFile};
 use tracing::info;
 
+/// Arguments CLI de `vapor` (piloté par `clap`).
 #[derive(Debug, Parser)]
 #[command(name = "vapor")]
 struct Cli {
@@ -26,6 +27,7 @@ struct Cli {
     command: Option<Command>,
 }
 
+/// Sous-commandes disponibles.
 #[derive(Debug, Subcommand)]
 enum Command {
     /// Runs the HTTP server
@@ -40,6 +42,9 @@ enum Command {
     },
 }
 
+/// État partagé injecté dans les handlers Axum.
+///
+/// Contient la DB, la config CSRF, le cache IP (anti-rejeu court) et le flag proxy.
 #[derive(Clone)]
 pub(crate) struct AppState {
     db: db::Db,
@@ -48,6 +53,12 @@ pub(crate) struct AppState {
     trust_proxy: bool,
 }
 
+/// Point d’entrée.
+///
+/// - Charge `.env` si présent
+/// - Initialise le logging
+/// - Connecte la DB et exécute les migrations
+/// - Exécute la sous-commande (serve / purge)
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     dotenvy::dotenv().ok();
@@ -77,6 +88,7 @@ async fn main() -> anyhow::Result<()> {
     }
 }
 
+/// Construit le routeur Axum et démarre le serveur HTTP.
 async fn serve(db: db::Db, _log_guard: logging::LogGuard) -> anyhow::Result<()> {
     let addr: SocketAddr = std::env::var("APP_ADDR")
         .unwrap_or_else(|_| "0.0.0.0:3000".to_string())
@@ -126,6 +138,7 @@ async fn serve(db: db::Db, _log_guard: logging::LogGuard) -> anyhow::Result<()> 
     Ok(())
 }
 
+/// Purge en boucle les données expirées et dort `interval` entre deux passes.
 async fn purge_loop(db: db::Db, interval: Duration) -> anyhow::Result<()> {
     loop {
         let stats = db.purge_expired().await.context("purge expired")?;
@@ -140,6 +153,7 @@ async fn purge_loop(db: db::Db, interval: Duration) -> anyhow::Result<()> {
     }
 }
 
+/// Signal d’arrêt “gracieux” (Ctrl-C).
 async fn shutdown_signal() {
     let _ = tokio::signal::ctrl_c().await;
 }

@@ -12,6 +12,7 @@ use tracing::info;
 
 use crate::{models, AppState};
 
+/// Réponse JSON générique `{ ok, error? }`.
 #[derive(Debug, Serialize)]
 struct ApiOk {
     ok: bool,
@@ -19,6 +20,7 @@ struct ApiOk {
     error: Option<String>,
 }
 
+/// Réponse JSON de `POST /api/get`.
 #[derive(Debug, Serialize)]
 struct ApiGetResponse {
     found: bool,
@@ -28,17 +30,27 @@ struct ApiGetResponse {
     error: Option<String>,
 }
 
+/// Réponse JSON de `GET /api/csrf`.
 #[derive(Debug, Serialize)]
 struct ApiCsrfResponse {
     csrf: String,
     field: String,
 }
 
+/// Requête JSON de `POST /api/get`.
+///
+/// `hashes` contient une liste de `key_hash` possibles (un par sel valide côté client).
 #[derive(Debug, Deserialize)]
 pub struct ApiGetRequest {
     hashes: Option<Vec<String>>,
 }
 
+/// Requête JSON de `POST /api/set`.
+///
+/// Le serveur reçoit uniquement :
+/// - un `key_hash` (jamais la clé en clair)
+/// - une valeur chiffrée (`value`)
+/// - un token CSRF (`csrf`) pour autoriser l’écriture
 #[derive(Debug, Deserialize)]
 pub struct ApiSetRequest {
     key_hash: Option<String>,
@@ -47,6 +59,9 @@ pub struct ApiSetRequest {
     csrf: Option<String>,
 }
 
+/// Valeur chiffrée “transport” (le serveur ne déchiffre pas).
+///
+/// Stockée en DB sous forme JSON, puis renvoyée telle quelle au client.
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ValueEnc {
     v: u8,
@@ -54,15 +69,20 @@ pub struct ValueEnc {
     ct: String,
 }
 
+/// Réponse JSON de `GET /api/salts`.
 #[derive(Debug, Serialize)]
 struct ApiSaltsResponse {
     salts: Vec<String>,
 }
 
+/// Helper pour retourner une réponse JSON avec un status HTTP.
 fn json<T: Serialize>(status: StatusCode, payload: T) -> Response {
     (status, Json(payload)).into_response()
 }
 
+/// `GET /api/salts`
+///
+/// Retourne la liste des sels valides (base64 URL-safe, sans padding) et assure la rotation.
 pub async fn api_salts(State(state): State<AppState>) -> Response {
     let salts = match state.db.list_valid_salts_with_rotation().await {
         Ok(v) => v,
@@ -81,6 +101,9 @@ pub async fn api_salts(State(state): State<AppState>) -> Response {
     json(StatusCode::OK, ApiSaltsResponse { salts: salts_b64 })
 }
 
+/// `GET /api/csrf`
+///
+/// Émet un token CSRF (et pose le cookie associé).
 pub async fn api_csrf(
     State(state): State<AppState>,
     cookies: tower_cookies::Cookies,
@@ -99,6 +122,9 @@ pub async fn api_csrf(
     )
 }
 
+/// `POST /api/set`
+///
+/// Valide CSRF + payload, applique l’anti-rejeu IP (fenêtre courte), puis insère en DB.
 pub async fn api_set(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -201,6 +227,9 @@ pub async fn api_set(
     json(StatusCode::OK, ApiOk { ok: true, error: None })
 }
 
+/// `POST /api/get`
+///
+/// Valide la liste de hashes, applique l’anti-rejeu IP, puis retourne la dernière valeur non expirée.
 pub async fn api_get(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -326,6 +355,9 @@ pub async fn api_get(
     }
 }
 
+/// Détermine l’IP client.
+///
+/// Si `trust_proxy=true`, tente `x-forwarded-for` (prend la première IP); sinon utilise l’IP socket.
 fn client_ip(headers: &HeaderMap, addr: SocketAddr, trust_proxy: bool) -> IpAddr {
     if trust_proxy {
         if let Some(xff) = headers.get("x-forwarded-for").and_then(|v| v.to_str().ok()) {
