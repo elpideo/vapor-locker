@@ -62,8 +62,13 @@ async fn main() -> anyhow::Result<()> {
     match cli.command.unwrap_or(Command::Serve) {
         Command::Serve => serve(db, log_guard).await,
         Command::PurgeOnce => {
-            let deleted = db.purge_expired().await.context("purge expired")?;
-            info!(event = "purge_once", deleted, "purge finished");
+            let stats = db.purge_expired().await.context("purge expired")?;
+            info!(
+                event = "purge_once",
+                entries_deleted = stats.entries_deleted,
+                salts_deleted = stats.salts_deleted,
+                "purge finished"
+            );
             Ok(())
         }
         Command::PurgeLoop { interval_seconds } => {
@@ -97,7 +102,8 @@ async fn serve(db: db::Db, _log_guard: logging::LogGuard) -> anyhow::Result<()> 
         .nest_service("/static", ServeDir::new("static"))
         .route_service("/", ServeFile::new("static/index.html"))
         .route("/api/csrf", get(handlers::api_csrf))
-        .route("/api/get", get(handlers::api_get))
+        .route("/api/salts", get(handlers::api_salts))
+        .route("/api/get", post(handlers::api_get))
         .route("/api/set", post(handlers::api_set))
         .layer(DefaultBodyLimit::max(250_000))
         .layer(CookieManagerLayer::new())
@@ -122,8 +128,14 @@ async fn serve(db: db::Db, _log_guard: logging::LogGuard) -> anyhow::Result<()> 
 
 async fn purge_loop(db: db::Db, interval: Duration) -> anyhow::Result<()> {
     loop {
-        let deleted = db.purge_expired().await.context("purge expired")?;
-        info!(event = "purge_loop", deleted, interval_seconds = interval.as_secs(), "purge finished");
+        let stats = db.purge_expired().await.context("purge expired")?;
+        info!(
+            event = "purge_loop",
+            entries_deleted = stats.entries_deleted,
+            salts_deleted = stats.salts_deleted,
+            interval_seconds = interval.as_secs(),
+            "purge finished"
+        );
         tokio::time::sleep(interval).await;
     }
 }

@@ -2359,6 +2359,7 @@ dependencies = [
  "moka",
  "rand",
  "serde",
+ "serde_json",
  "sqlx",
  "time",
  "tokio",

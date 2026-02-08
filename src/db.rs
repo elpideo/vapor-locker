@@ -1,7 +1,9 @@
 use std::time::Duration;
 
 use anyhow::Context;
+use rand::RngCore;
 use sqlx::{postgres::PgPoolOptions, PgPool};
+use time::OffsetDateTime;
 
 #[derive(Clone)]
 pub struct Db {
@@ -13,6 +15,18 @@ struct FoundRow {
     id: i64,
     value: String,
     ephemeral: bool,
+}
+
+#[derive(Debug, sqlx::FromRow)]
+struct SaltRow {
+    salt: Vec<u8>,
+    created_at: OffsetDateTime,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct PurgeStats {
+    pub entries_deleted: u64,
+    pub salts_deleted: u64,
 }
 
 impl Db {
@@ -41,14 +55,14 @@ impl Db {
         Ok(())
     }
 
-    pub async fn insert(&self, key: &str, value: &str, ephemeral: bool) -> anyhow::Result<()> {
+    pub async fn insert(&self, key_hash: &str, value: &str, ephemeral: bool) -> anyhow::Result<()> {
         sqlx::query(
             r#"
-            INSERT INTO entries (key, value, ephemeral)
+            INSERT INTO entries (key_hash, value, ephemeral)
             VALUES ($1, $2, $3)
             "#,
         )
-        .bind(key)
+        .bind(key_hash)
         .bind(value)
         .bind(ephemeral)
         .execute(&self.pool)
@@ -57,26 +71,30 @@ impl Db {
         Ok(())
     }
 
-    /// Get the most recent, non-expired entry for a key.
+    /// Get the most recent, non-expired entry for any key_hash in the list.
     /// If it is ephemeral, it is deleted in the same transaction.
-    pub async fn get_value_maybe_delete_ephemeral(
+    pub async fn get_value_by_hashes_maybe_delete_ephemeral(
         &self,
-        key: &str,
+        key_hashes: Vec<String>,
     ) -> anyhow::Result<Option<String>> {
+        if key_hashes.is_empty() {
+            return Ok(None);
+        }
+
         let mut tx = self.pool.begin().await.context("begin tx")?;
 
         let row: Option<FoundRow> = sqlx::query_as(
             r#"
             SELECT id, value, ephemeral
             FROM entries
-            WHERE key = $1
+            WHERE key_hash = ANY($1)
               AND created_at >= (now() - interval '24 hours')
             ORDER BY created_at DESC
             LIMIT 1
             FOR UPDATE
             "#,
         )
-        .bind(key)
+        .bind(key_hashes)
         .fetch_optional(&mut *tx)
         .await
         .context("select entry")?;
@@ -98,8 +116,58 @@ impl Db {
         Ok(Some(row.value))
     }
 
-    pub async fn purge_expired(&self) -> anyhow::Result<u64> {
-        let res = sqlx::query(
+    pub async fn list_valid_salts_with_rotation(&self) -> anyhow::Result<Vec<Vec<u8>>> {
+        // Ensure there's a recent salt (rotation ~1h).
+        let now = OffsetDateTime::now_utc();
+        let latest: Option<OffsetDateTime> = sqlx::query_scalar(
+            r#"
+            SELECT created_at
+            FROM salts
+            ORDER BY created_at DESC
+            LIMIT 1
+            "#,
+        )
+        .fetch_optional(&self.pool)
+        .await
+        .context("select latest salt created_at")?;
+
+        let need_new = match latest {
+            None => true,
+            Some(ts) => ts < (now - time::Duration::hours(1)),
+        };
+
+        if need_new {
+            let mut bytes = [0u8; 16]; // 128-bit salt
+            rand::thread_rng().fill_bytes(&mut bytes);
+            sqlx::query(
+                r#"
+                INSERT INTO salts (salt)
+                VALUES ($1)
+                "#,
+            )
+            .bind(bytes.as_slice())
+            .execute(&self.pool)
+            .await
+            .context("insert salt")?;
+        }
+
+        let rows: Vec<SaltRow> = sqlx::query_as(
+            r#"
+            SELECT salt, created_at
+            FROM salts
+            WHERE created_at >= (now() - interval '25 hours')
+            ORDER BY created_at DESC
+            "#,
+        )
+        .fetch_all(&self.pool)
+        .await
+        .context("select valid salts")?;
+
+        Ok(rows.into_iter().map(|r| r.salt).collect())
+    }
+
+    pub async fn purge_expired(&self) -> anyhow::Result<PurgeStats> {
+        let entries_res = sqlx::query(
             r#"
             DELETE FROM entries
             WHERE created_at < (now() - interval '24 hours')
@@ -107,8 +175,22 @@ impl Db {
         )
         .execute(&self.pool)
         .await
-        .context("purge expired")?;
-        Ok(res.rows_affected())
+        .context("purge expired entries")?;
+
+        let salts_res = sqlx::query(
+            r#"
+            DELETE FROM salts
+            WHERE created_at < (now() - interval '25 hours')
+            "#,
+        )
+        .execute(&self.pool)
+        .await
+        .context("purge expired salts")?;
+
+        Ok(PurgeStats {
+            entries_deleted: entries_res.rows_affected(),
+            salts_deleted: salts_res.rows_affected(),
+        })
     }
 }
 

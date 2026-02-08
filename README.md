@@ -45,17 +45,28 @@ Au démarrage, les migrations SQL dans `migrations/` sont appliquées automatiqu
 ## API (JSON)
 
 - `GET /api/csrf` → `{ "csrf": "...", "field": "csrf" }` (pose aussi le cookie CSRF HttpOnly)
-- `GET /api/get?key=...` → `{ "found": true, "value": "..." }` ou `{ "found": false }`
+- `GET /api/salts` → `{ "salts": ["..."] }`
+  - Retourne les sels valides (créés dans les **25 dernières heures**), triés du plus récent au plus ancien.
+  - Crée automatiquement un nouveau sel si le plus récent a plus de ~1h.
 - `POST /api/set` (JSON) → `{ "ok": true }`
+  - Le navigateur envoie uniquement:
+    - `key_hash`: un hash dérivé de (clé + sel)
+    - `value`: une valeur **chiffrée** `{ v, iv, ct }` (AES‑GCM)
+- `POST /api/get` (JSON) → `{ "found": true, "value": { "v": 1, "iv": "...", "ct": "..." } }` ou `{ "found": false }`
+  - Le navigateur envoie une liste de `hashes` (un par sel valide).
+  - Le serveur ne voit jamais la clé en clair et ne renvoie que du chiffré.
 
 Exemple minimal (set):
+(la dérivation PBKDF2‑SHA256 (200k itérations) et le chiffrement AES‑GCM sont faits dans `static/app.js` via WebCrypto)
 
 ```js
 const { csrf } = await (await fetch('/api/csrf')).json();
+const { salts } = await (await fetch('/api/salts')).json();
+// key_hash + value doivent être calculés côté navigateur (voir static/app.js)
 const res = await fetch('/api/set', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ key: 'k', value: 'v', ephemeral: false, csrf }),
+  body: JSON.stringify({ key_hash: '...', value: { v: 1, iv: '...', ct: '...' }, ephemeral: false, csrf }),
 });
 console.log(await res.json());
 ```
@@ -110,6 +121,8 @@ Le service `purger` lance :
 - `vapor purge-loop` toutes les `PURGE_INTERVAL_SECONDS` (défaut 3600s)
 
 et supprime les entrées `created_at < now() - 24h`.
+
+Les sels expirés sont aussi purgés : `created_at < now() - 25h`.
 
 ### Logs
 
