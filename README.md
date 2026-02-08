@@ -34,17 +34,31 @@ cargo run
 
 Au démarrage, les migrations SQL dans `migrations/` sont appliquées automatiquement.
 
-## Pages
+## Front (statique)
 
-- **Page unique (UI)**: `GET /` et `GET /get` affichent la même interface (3 sections)
-- **Section 1 (toujours affichée)**: formulaire **GET** (`POST /get`) + (optionnel) résultat / message
-  - Résultat d’un **GET** (valeur + bouton **copier**)
-  - Message **OK** après un **SET** réussi
-  - Message **Non trouvé** si la clé est inconnue ou expirée
-- **Section 3 (toujours affichée)**: formulaire **SET** (`POST /set`)
-- **Option éphémère**: “EVAPORATING CONTENT” affiche un tooltip: “Content will be evaporated after the first reading”.
-- **Masquage du résultat**: quand une valeur est trouvée, la réponse affiche `*******` par défaut. Une icône “œil” permet d’afficher/masquer la valeur, et l’icône “copier” copie toujours la vraie valeur.
+- **Page unique (UI)**: `GET /` sert `static/index.html`
+- **Fichiers statiques**: `GET /static/*` (JS, etc.)
+- **Option éphémère**: “EVAPORATING CONTENT” supprime la valeur après la première lecture.
+- **Masquage du résultat**: quand une valeur est trouvée, l’UI affiche `*******` par défaut. Une icône “œil” permet d’afficher/masquer la valeur, et l’icône “copier” copie toujours la vraie valeur.
 - **Sauts de ligne**: l’affichage et la copie conservent les retours à la ligne du contenu stocké.
+
+## API (JSON)
+
+- `GET /api/csrf` → `{ "csrf": "...", "field": "csrf" }` (pose aussi le cookie CSRF HttpOnly)
+- `GET /api/get?key=...` → `{ "found": true, "value": "..." }` ou `{ "found": false }`
+- `POST /api/set` (JSON) → `{ "ok": true }`
+
+Exemple minimal (set):
+
+```js
+const { csrf } = await (await fetch('/api/csrf')).json();
+const res = await fetch('/api/set', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ key: 'k', value: 'v', ephemeral: false, csrf }),
+});
+console.log(await res.json());
+```
 
 ## Purge
 
@@ -73,7 +87,7 @@ docker compose up --build
 Puis ouvrir:
 
 - `http://localhost:3000/` (entrée)
-- `http://localhost:3000/get` (récupération)
+- `http://localhost:3000/static/app.js` (asset statique)
 
 ### Base de données
 

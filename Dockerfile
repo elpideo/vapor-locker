@@ -1,4 +1,4 @@
-FROM rust:1.84-bookworm AS builder
+FROM rust:1.88-bookworm AS builder
 
 WORKDIR /app
 
@@ -22,6 +22,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY --from=builder /app/target/release/vapor /app/vapor
 COPY migrations /app/migrations
+COPY static /app/static
 
 ENV APP_ADDR=0.0.0.0:3000
 EXPOSE 3000

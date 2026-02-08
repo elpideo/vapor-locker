@@ -16,6 +16,7 @@ use axum::{
 use clap::{Parser, Subcommand};
 use tower::ServiceBuilder;
 use tower_cookies::CookieManagerLayer;
+use tower_http::services::{ServeDir, ServeFile};
 use tracing::info;
 
 #[derive(Debug, Parser)]
@@ -93,9 +94,11 @@ async fn serve(db: db::Db, _log_guard: logging::LogGuard) -> anyhow::Result<()> 
     };
 
     let app = Router::new()
-        .route("/", get(handlers::get_set_form))
-        .route("/set", post(handlers::post_set))
-        .route("/get", get(handlers::get_get_form).post(handlers::post_get))
+        .nest_service("/static", ServeDir::new("static"))
+        .route_service("/", ServeFile::new("static/index.html"))
+        .route("/api/csrf", get(handlers::api_csrf))
+        .route("/api/get", get(handlers::api_get))
+        .route("/api/set", post(handlers::api_set))
         .layer(DefaultBodyLimit::max(250_000))
         .layer(CookieManagerLayer::new())
         .layer(
