@@ -1,3 +1,8 @@
+//! Modèles de données pour les opérations clé-valeur.
+//!
+//! Définit les structures d'entrée et les erreurs de validation.
+
+/// Paramètres pour une opération SET (stockage clé-valeur).
 #[derive(Debug, Clone)]
 pub struct SetInput {
     pub key: String,
@@ -5,11 +10,13 @@ pub struct SetInput {
     pub ephemeral: bool,
 }
 
+/// Paramètres pour une opération GET (récupération par clé).
 #[derive(Debug, Clone)]
 pub struct GetInput {
     pub key: String,
 }
 
+/// Erreur de validation des entrées (clé ou valeur trop longue).
 #[derive(Debug)]
 pub enum ValidationError {
     KeyTooLong { max: usize, got: usize },
@@ -32,6 +39,7 @@ impl std::fmt::Display for ValidationError {
 impl std::error::Error for ValidationError {}
 
 impl SetInput {
+    /// Valide la clé (max 255 caractères) et la valeur (max 100 000 caractères).
     pub fn validate(self) -> Result<Self, ValidationError> {
         let key_len = self.key.chars().count();
         if key_len > 255 {
@@ -52,6 +60,7 @@ impl SetInput {
 }
 
 impl GetInput {
+    /// Valide la clé (max 255 caractères).
     pub fn validate(self) -> Result<Self, ValidationError> {
         let key_len = self.key.chars().count();
         if key_len > 255 {

@@ -10,11 +10,14 @@ Il vise à expliquer le “quoi” (API/types) et le “pourquoi” (rôle/flux)
 
 ### Documentation inline
 
-Les mêmes éléments sont aussi documentés **directement dans le code** via des doc-comments Rust `///` dans :
+Les mêmes éléments sont aussi documentés **directement dans le code** via des doc-comments Rust `///` et `//!` dans :
 
 - `src/main.rs`
 - `src/handlers.rs`
 - `src/db.rs`
+- `src/csrf.rs` — protection CSRF (module, types, méthodes)
+- `src/models.rs` — modèles d'entrée et validation
+- `src/security.rs` — cache IP anti-spam
 
 ---
 
