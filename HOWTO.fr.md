@@ -91,6 +91,8 @@ cargo run -- purge-loop --interval-seconds 3600
 
 ## Docker / Docker Compose
 
+> **Déploiement en production** : voir `Deploiement.md` pour pousser vers le registry et déployer sur un serveur.
+
 ### Démarrage
 
 Depuis la racine du projet :
@@ -130,7 +132,7 @@ Les sels expirés sont aussi purgés : `created_at < now() - 25h`.
 
 ### Logs
 
-Les logs sont en JSON (une ligne par événement) et tournent par taille :
+Les logs sont en JSON (une ligne par événement) et tournent par taille. En plus du fichier, les logs sont aussi envoyés sur stdout pour `docker compose logs` :
 
 - `LOG_MAX_BYTES` (défaut 100MB)
 - `LOG_MAX_FILES` (défaut 5)
