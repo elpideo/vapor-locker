@@ -1,0 +1,36 @@
+# Fichiers sensibles
+.env
+.env.*
+!.env.example
+
+# Documentation de déploiement (infos sensibles)
+Deploiement.md
+
+# Logs
+logs/
+
+# Rust / Cargo
+target/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# IDE / Éditeurs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Fichiers temporaires
+*.log
+*.tmp
+*.temp
+.cache/
+
+# Fichiers de build
+dist/
+build/
+out/
