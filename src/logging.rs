@@ -52,6 +52,11 @@ pub fn init_logging_from_env() -> anyhow::Result<LogGuard> {
                 .with_span_list(false)
                 .with_writer(writer),
         )
+        .with(
+            tracing_subscriber::fmt::layer()
+                .with_writer(io::stdout)
+                .with_ansi(false),
+        )
         .init();
 
     Ok(LogGuard { _keep_alive: shared })

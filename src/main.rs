@@ -67,12 +67,21 @@ async fn main() -> anyhow::Result<()> {
     let log_guard = logging::init_logging_from_env().context("init logging")?;
     info!(event = "startup", "vapor starting");
 
+    info!(event = "db_connect", "connecting to database");
     let db = db::Db::connect_from_env().await.context("connect db")?;
-    db.migrate().await.context("run migrations")?;
+    info!(event = "db_connected", "database connected");
 
-    match cli.command.unwrap_or(Command::Serve) {
+    info!(event = "migrate", "running migrations");
+    db.migrate().await.context("run migrations")?;
+    info!(event = "migrate_done", "migrations complete");
+
+    let cmd = cli.command.unwrap_or(Command::Serve);
+    info!(event = "command", cmd = ?cmd, "executing command");
+
+    match cmd {
         Command::Serve => serve(db, log_guard).await,
         Command::PurgeOnce => {
+            info!(event = "purge_once_start", "starting one-shot purge");
             let stats = db.purge_expired().await.context("purge expired")?;
             info!(
                 event = "purge_once",
@@ -83,6 +92,7 @@ async fn main() -> anyhow::Result<()> {
             Ok(())
         }
         Command::PurgeLoop { interval_seconds } => {
+            info!(event = "purge_loop_start", interval_seconds, "starting purge loop");
             purge_loop(db, Duration::from_secs(interval_seconds)).await
         }
     }
@@ -90,6 +100,7 @@ async fn main() -> anyhow::Result<()> {
 
 /// Construit le routeur Axum et démarre le serveur HTTP.
 async fn serve(db: db::Db, _log_guard: logging::LogGuard) -> anyhow::Result<()> {
+    info!(event = "serve_start", "building router and binding");
     let addr: SocketAddr = std::env::var("APP_ADDR")
         .unwrap_or_else(|_| "0.0.0.0:3000".to_string())
         .parse()
