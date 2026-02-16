@@ -46,6 +46,7 @@ Au démarrage, les migrations SQL dans `migrations/` sont appliquées automatiqu
 - **Option éphémère**: “EVAPORATING CONTENT” supprime la valeur après la première lecture.
 - **Masquage du résultat**: quand une valeur est trouvée, l’UI affiche `*******` par défaut. Une icône “œil” permet d’afficher/masquer la valeur, et l’icône “copier” copie toujours la vraie valeur.
 - **Sauts de ligne**: l’affichage et la copie conservent les retours à la ligne du contenu stocké.
+- **Sections informatives** (sous le formulaire) : HOW IT WORKS, SECURITY MODEL, WHAT THE SERVER SEES, THREAT MODEL, DESIGN PRINCIPLES, SOURCE (lien GitHub).
 
 ## API (JSON)
 

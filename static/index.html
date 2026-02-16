@@ -63,6 +63,12 @@
       font-size:14px;
       margin-bottom:14px;
     }
+    .cardBody{margin:0;line-height:1.7;color:rgba(232,236,243,.9);}
+    .cardBody p{margin:0 0 12px;}
+    .cardBody p:last-child{margin-bottom:0;}
+    .cardBody ol,.cardBody ul{margin:0;padding-left:1.2em;}
+    .cardBody a{color:var(--accent);text-decoration:none;}
+    .cardBody a:hover{text-decoration:underline;}
     .fieldRow{display:flex;gap:12px;align-items:center;}
     .fieldCol{display:flex;flex-direction:column;gap:12px;}
     input[type=text], textarea{
@@ -265,6 +271,61 @@
 
         <div id="setMessage" class="resultSurface hidden">
           <div class="pill" id="setMessageText"></div>
+        </div>
+      </section>
+
+      <div class="divider" aria-hidden="true"></div>
+
+      <section class="card">
+        <div class="cardTitle">HOW IT WORKS</div>
+        <ol class="cardBody">
+          <li><strong>Encrypt.</strong> Enter a key and content. The key is derived with PBKDF2-SHA256 (200k iterations). Content is encrypted with AES-256-GCM in the browser. A random IV is generated per secret.</li>
+          <li><strong>Store.</strong> The server receives a SHA-256 hash of the lookup key and the encrypted blob. Plaintext and encryption key never leave your device.</li>
+          <li><strong>Retrieve.</strong> Enter the key. The client hashes it, fetches the blob, derives the same key, and decrypts locally. Secrets expire after 24 hours or optionally after first read.</li>
+        </ol>
+      </section>
+
+      <section class="card">
+        <div class="cardTitle">SECURITY MODEL</div>
+        <div class="cardBody">
+        <p>Client-side: key derivation (PBKDF2-SHA256, 200,000 iterations), AES-256-GCM encryption with a cryptographically secure random IV, and lookup key hashing (SHA-256). All operations use the Web Crypto API.</p>
+        <p>The server stores only the hashed lookup key, the encrypted blob, and expiration metadata. It cannot access plaintext, the encryption key, or the original lookup key.</p>
+        <p>Authenticated encryption (AES-GCM) ensures integrity: tampering is detected on decryption.</p>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="cardTitle">WHAT THE SERVER SEES</div>
+        <ul class="cardBody">
+          <li>Hashed lookup key (SHA-256)</li>
+          <li>Encrypted blob (AES-256-GCM ciphertext + IV)</li>
+          <li>Expiration metadata (TTL or one-time flag)</li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <div class="cardTitle">THREAT MODEL</div>
+        <div class="cardBody">
+        <p>Protects against: server compromise, database leak, curious admin. The server has no plaintext or keys to expose.</p>
+        <p>Does not protect against: compromised device, weak or guessable keys, phishing, insecure key sharing (e.g. over unencrypted channels).</p>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="cardTitle">DESIGN PRINCIPLES</div>
+        <ul class="cardBody">
+          <li>No accounts</li>
+          <li>No plaintext storage</li>
+          <li>No custom cryptography</li>
+          <li>Built on standard primitives (Web Crypto API)</li>
+          <li>Minimal attack surface</li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <div class="cardTitle">SOURCE</div>
+        <div class="cardBody">
+        <p>Open source. Rust backend, vanilla JS frontend. <a href="https://github.com/elpideo/vapor" target="_blank" rel="noopener noreferrer">github.com/elpideo/vapor</a></p>
         </div>
       </section>
     </div>
