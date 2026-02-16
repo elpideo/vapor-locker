@@ -41,6 +41,7 @@ Au démarrage, les migrations SQL dans `migrations/` sont appliquées automatiqu
 ## Front (statique)
 
 - **Page unique (UI)**: `GET /` sert `static/index.html`
+- **Bouton GitHub** : icône en haut à droite, lien vers le dépôt source
 - **Fichiers statiques**: `GET /static/*` (JS, etc.)
 - **Clé aléatoire**: dans la section STORE, un bouton icône à droite du champ Key génère une clé aléatoire (64 caractères alphanumériques cryptographiquement sécurisés).
 - **Option éphémère**: “EVAPORATING CONTENT” supprime la valeur après la première lecture.
