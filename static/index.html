@@ -160,6 +160,23 @@
     .check input{width:16px;height:16px;}
     .srOnly{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
     .hidden{display:none;}
+
+    .keyRow{display:flex;gap:12px;align-items:center;}
+    .keyRow input{flex:1;min-width:0;}
+    .keyRandomBtn{
+      width:52px;height:52px;
+      border-radius:14px;
+      border:1px solid var(--accent);
+      background:var(--field);
+      color:var(--accent);
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      transition: opacity .15s;
+    }
+    .keyRandomBtn:hover{opacity:.85;}
+    .keyRandomBtn .icon{width:28px;height:28px;}
   </style>
 </head>
 <body>
@@ -216,8 +233,18 @@
       <section class="card">
         <div class="cardTitle">STORE</div>
         <form id="setForm" class="fieldCol" autocomplete="off">
-          <label class="srOnly" for="set_key">Key</label>
-          <input id="set_key" name="key" type="text" maxlength="255" placeholder="Key" autocomplete="off"/>
+          <div class="keyRow">
+            <label class="srOnly" for="set_key">Key</label>
+            <input id="set_key" name="key" type="text" maxlength="255" placeholder="Key" autocomplete="off"/>
+            <button type="button" class="keyRandomBtn" id="keyRandomBtn" aria-label="Générer une clé aléatoire">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <rect x="4" y="4" width="16" height="16" rx="3" stroke="currentColor" stroke-width="2"/>
+                <circle cx="8" cy="8" r="1.2" fill="currentColor"/>
+                <circle cx="16" cy="16" r="1.2" fill="currentColor"/>
+                <circle cx="12" cy="12" r="1.2" fill="currentColor"/>
+              </svg>
+            </button>
+          </div>
 
           <label class="srOnly" for="set_value">Value</label>
           <textarea id="set_value" name="value" maxlength="100000" placeholder="Content or Secret"></textarea>

@@ -21,6 +21,7 @@
   const setEphemeral = $('ephemeral');
   const setMessage = $('setMessage');
   const setMessageText = $('setMessageText');
+  const keyRandomBtn = $('keyRandomBtn');
 
   let csrfToken = null;
   let revealed = false;
@@ -65,6 +66,13 @@
 
   function hideSetMessage() {
     setMessage.classList.add('hidden');
+  }
+
+  function generateRandomKey(length) {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    const arr = new Uint8Array(length);
+    crypto.getRandomValues(arr);
+    return Array.from(arr, (c) => chars[c % chars.length]).join('');
   }
 
   function copyText(text) {
@@ -211,6 +219,12 @@
       revealBtn.setAttribute('aria-label', 'Masquer');
     }
   });
+
+  if (keyRandomBtn) {
+    keyRandomBtn.addEventListener('click', () => {
+      setKey.value = generateRandomKey(64);
+    });
+  }
 
   copyBtn.addEventListener('click', () => {
     if (getValue.classList.contains('hidden')) return;
