@@ -43,7 +43,7 @@ Au démarrage, les migrations SQL dans `migrations/` sont appliquées automatiqu
 - **Page unique (UI)**: `GET /` sert `static/index.html`
 - **Bouton GitHub** : icône en haut à droite, lien vers le dépôt source
 - **Fichiers statiques**: `GET /static/*` (JS, etc.)
-- **Clé aléatoire**: dans la section STORE, un bouton icône à droite du champ Key génère une clé aléatoire (64 caractères alphanumériques cryptographiquement sécurisés).
+- **Clé aléatoire**: dans la section STORE, un bouton icône à droite du champ Key génère une clé aléatoire (64 caractères alphanumériques cryptographiquement sécurisés). Une icône copier discrète à l'intérieur du champ permet de copier la clé dans le presse-papier.
 - **Option éphémère**: “EVAPORATING CONTENT” supprime la valeur après la première lecture.
 - **Masquage du résultat**: quand une valeur est trouvée, l’UI affiche `*******` par défaut. Une icône “œil” permet d’afficher/masquer la valeur, et l’icône “copier” copie toujours la vraie valeur.
 - **Sauts de ligne**: l’affichage et la copie conservent les retours à la ligne du contenu stocké.

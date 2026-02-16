@@ -169,6 +169,29 @@
 
     .keyRow{display:flex;gap:12px;align-items:center;}
     .keyRow input{flex:1;min-width:0;}
+    .keyInputWrap{position:relative;flex:1;min-width:0;}
+    .keyInputWrap input{padding-right:40px;}
+    .keyCopyInside{
+      position:absolute;
+      right:10px;
+      top:50%;
+      transform:translateY(-50%);
+      width:32px;height:32px;
+      padding:0;
+      border:0;
+      border-radius:8px;
+      background:transparent;
+      color:var(--muted);
+      opacity:.6;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      transition: opacity .15s, color .15s;
+    }
+    .keyCopyInside:hover{opacity:1;color:var(--accent);}
+    .keyCopyInside .icon{width:18px;height:18px;}
+    .keyCopyInside.copied{opacity:1;color:var(--accent);}
     .keyRandomBtn{
       width:52px;height:52px;
       border-radius:14px;
@@ -263,8 +286,16 @@
         <div class="cardTitle">STORE</div>
         <form id="setForm" class="fieldCol" autocomplete="off">
           <div class="keyRow">
-            <label class="srOnly" for="set_key">Key</label>
-            <input id="set_key" name="key" type="text" maxlength="255" placeholder="Key" autocomplete="off"/>
+            <div class="keyInputWrap">
+              <label class="srOnly" for="set_key">Key</label>
+              <input id="set_key" name="key" type="text" maxlength="255" placeholder="Key" autocomplete="off"/>
+              <button type="button" class="keyCopyInside" id="keyCopyBtn" aria-label="Copier la clé">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M9 9h10v10H9V9Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                  <path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </button>
+            </div>
             <button type="button" class="keyRandomBtn" id="keyRandomBtn" aria-label="Générer une clé aléatoire">
               <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <rect x="4" y="4" width="16" height="16" rx="3" stroke="currentColor" stroke-width="2"/>

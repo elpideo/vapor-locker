@@ -22,6 +22,7 @@
   const setMessage = $('setMessage');
   const setMessageText = $('setMessageText');
   const keyRandomBtn = $('keyRandomBtn');
+  const keyCopyBtn = $('keyCopyBtn');
 
   let csrfToken = null;
   let revealed = false;
@@ -223,6 +224,16 @@
   if (keyRandomBtn) {
     keyRandomBtn.addEventListener('click', () => {
       setKey.value = generateRandomKey(64);
+    });
+  }
+  if (keyCopyBtn) {
+    keyCopyBtn.addEventListener('click', () => {
+      const text = (setKey.value || '').trim();
+      if (!text) return;
+      copyText(text).then(() => {
+        keyCopyBtn.classList.add('copied');
+        window.setTimeout(() => keyCopyBtn.classList.remove('copied'), 900);
+      });
     });
   }
 
