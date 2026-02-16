@@ -17,7 +17,7 @@ Service web (Rust + Axum) de stockage clé‑valeur avec récupération, durée 
 Variables d’environnement (exemples) :
 Le binaire charge automatiquement un fichier `.env` s’il est présent.
 
-- `DATABASE_URL=postgres://postgres:postgres@localhost:5432/vapor`
+- `DATABASE_URL=postgres://postgres:postgres@localhost:5433/vapor`
 - `APP_ADDR=0.0.0.0:3000`
 - `TRUST_PROXY=false`
 - `COOKIE_SECURE=false`

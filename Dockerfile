@@ -7,10 +7,10 @@ COPY Cargo.toml Cargo.lock ./
 RUN mkdir -p src && echo "fn main() {}" > src/main.rs
 RUN cargo build --release
 
-# Build real binary
+# Build real binary (rm forces relink, avoids stale placeholder from cache)
 COPY src ./src
 COPY migrations ./migrations
-RUN cargo build --release
+RUN rm -f target/release/vapor target/release/deps/vapor target/release/deps/vapor-* 2>/dev/null; cargo build --release
 
 FROM debian:bookworm-slim AS runtime
 WORKDIR /app
