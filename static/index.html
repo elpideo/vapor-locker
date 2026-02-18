@@ -81,7 +81,8 @@
       outline:none;
     }
     input[type=text]{height:52px;}
-    textarea{min-height:140px;resize:vertical;}
+    textarea{min-height:140px;resize:vertical;transition: opacity .4s ease;}
+    textarea.valueFadeOut{opacity:0;}
     input[type=text]::placeholder, textarea::placeholder{color:rgba(154,163,178,.65);}
     input[type=text]:focus, textarea:focus{border-color:rgba(104,255,182,.55);box-shadow:0 0 0 4px rgba(104,255,182,.10);}
 
@@ -161,9 +162,15 @@
       font-weight:650;
     }
     .muted{color:var(--muted);font-weight:550;}
+    .ephemeralLabel{color:var(--accent);}
+    .evaporIcon{vertical-align:middle;margin-right:6px;}
     .rowBetween{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;}
     .check{display:inline-flex;align-items:center;gap:10px;color:rgba(232,236,243,.86);}
-    .check input{width:16px;height:16px;}
+    .check input{
+      width:20px;
+      height:20px;
+      accent-color:var(--accent);
+    }
     .srOnly{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
     .hidden{display:none;}
 
@@ -312,7 +319,7 @@
           <div class="rowBetween">
             <label class="check">
               <input id="ephemeral" name="ephemeral" type="checkbox"/>
-              <span class="muted" title="Content will be evaporated after the first reading">🌬️ EVAPORATING CONTENT</span>
+              <span class="muted ephemeralLabel" title="Content will be evaporated after the first reading"><img src="/static/evapor.png" alt="" class="evaporIcon" width="20" height="20"/> EVAPORATING CONTENT</span>
             </label>
             <button class="actionBtn" type="submit" aria-label="Set">
               <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">

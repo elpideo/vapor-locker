@@ -69,6 +69,15 @@
     setMessage.classList.add('hidden');
   }
 
+  function fadeOutAndClearValue() {
+    if (!setValue) return;
+    setValue.classList.add('valueFadeOut');
+    window.setTimeout(() => {
+      setValue.value = '';
+      setValue.classList.remove('valueFadeOut');
+    }, 420);
+  }
+
   function generateRandomKey(length) {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     const arr = new Uint8Array(length);
@@ -376,6 +385,7 @@
           });
           if (retry.res.ok && retry.data && retry.data.ok) {
             showSetMessage('OK');
+            fadeOutAndClearValue();
             setNetStatus('Prêt');
             return;
           }
@@ -393,10 +403,12 @@
 
     if (data && data.ok) {
       showSetMessage('OK');
+      fadeOutAndClearValue();
     } else if (data && data.error) {
       showSetMessage(data.error);
     } else {
       showSetMessage('OK');
+      fadeOutAndClearValue();
     }
     setNetStatus('Prêt');
   });
