@@ -150,6 +150,16 @@ Share a secret. Let it evaporate.
 
 ---
 
+## 🔗 Link preview (Slack, réseaux sociaux)
+
+Le site expose des balises **Open Graph** et **Twitter Card** pour que le partage du lien affiche un aperçu (titre, description, image) sur Slack, LinkedIn, Facebook, X/Twitter, etc.
+
+- **Image utilisée** : `static/vapor_logo.png` (par défaut).
+- Pour un rendu optimal (grande carte), vous pouvez ajouter une image dédiée **1200×630 px** dans `static/og-image.png` et mettre à jour les meta `og:image` et `twitter:image` dans `static/index.html` pour pointer vers `/static/og-image.png`.
+- Les URLs d’image sont relatives ; les crawlers les résolvent à partir de l’URL de la page.
+
+---
+
 ## 📜 License
 
 AGPL
