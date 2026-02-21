@@ -14,16 +14,33 @@
   <meta property="og:type" content="website"/>
   <meta property="og:title" content="Vapor-Locker"/>
   <meta property="og:description" content="Secrets that evaporate. Not leak. Chiffrement côté client, zero-knowledge, auto-destruct."/>
-  <meta property="og:image" content="/static/vapor_logo.png"/>
+  <meta property="og:image" content="/static/vapor_social.png"/>
   <meta property="og:locale" content="fr_FR"/>
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image"/>
   <meta name="twitter:title" content="Vapor-Locker"/>
   <meta name="twitter:description" content="Secrets that evaporate. Not leak. Chiffrement côté client, zero-knowledge, auto-destruct."/>
-  <meta name="twitter:image" content="/static/vapor_logo.png"/>
+  <meta name="twitter:image" content="/static/vapor_social.png"/>
+
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin/>
+  <link rel="preload" href="https://cdn.jsdelivr.net/npm/@fontsource/geist-sans/files/geist-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin/>
 
   <style>
+    @font-face {
+      font-family: "Geist Sans";
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+      src: url("https://cdn.jsdelivr.net/npm/@fontsource/geist-sans/files/geist-sans-latin-400-normal.woff2") format("woff2");
+    }
+    @font-face {
+      font-family: "Geist Sans";
+      font-style: normal;
+      font-weight: 600;
+      font-display: swap;
+      src: url("https://cdn.jsdelivr.net/npm/@fontsource/geist-sans/files/geist-sans-latin-600-normal.woff2") format("woff2");
+    }
     :root{
       --bg0:#07080a;
       --bg1:#0b0c0f;
@@ -43,7 +60,7 @@
     html,body{height:100%;}
     body{
       margin:0;
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif;
+      font-family: "Geist Sans", ui-sans-serif, system-ui, sans-serif;
       color:var(--text);
       background:
         radial-gradient(900px 560px at 20% -10%, rgba(104,255,182,.10), transparent 60%),
