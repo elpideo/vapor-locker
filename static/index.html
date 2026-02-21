@@ -245,6 +245,50 @@
     }
     .keyRandomBtn:hover{opacity:.85;}
     .keyRandomBtn .icon{width:28px;height:28px;}
+    .storedLinkRow{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      margin-top:8px;
+    }
+    .storedLinkRow.hidden{display:none;}
+    .storedLinkCheck{
+      flex:0 0 auto;
+      width:28px;height:28px;
+      border-radius:50%;
+      background:rgba(104,255,182,.18);
+      color:var(--accent);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .storedLinkCheck .icon{width:16px;height:16px;}
+    .storedLinkAnchor{
+      flex:1;
+      min-width:0;
+      color:var(--accent);
+      font-size:14px;
+      text-decoration:none;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .storedLinkAnchor:hover{text-decoration:underline;}
+    .storedLinkCopyBtn{
+      flex:0 0 auto;
+      width:36px;height:36px;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.04);
+      color:rgba(232,236,243,.85);
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .storedLinkCopyBtn:hover{color:var(--accent);border-color:rgba(104,255,182,.3);}
+    .storedLinkCopyBtn.copied{background:rgba(104,255,182,.16);border-color:rgba(104,255,182,.30);color:var(--accent);}
+    .storedLinkCopyBtn .icon{width:18px;height:18px;}
     .githubBtn{
       position:fixed;
       top:18px;
@@ -324,6 +368,9 @@
       <section class="card">
         <div class="cardTitle">STORE</div>
         <form id="setForm" class="fieldCol" autocomplete="off">
+          <label class="srOnly" for="set_value">Value</label>
+          <textarea id="set_value" name="value" maxlength="100000" placeholder="Content or Secret"></textarea>
+
           <div class="keyRow">
             <div class="keyInputWrap">
               <label class="srOnly" for="set_key">Key</label>
@@ -345,8 +392,20 @@
             </button>
           </div>
 
-          <label class="srOnly" for="set_value">Value</label>
-          <textarea id="set_value" name="value" maxlength="100000" placeholder="Content or Secret"></textarea>
+          <div id="setStoredLink" class="storedLinkRow hidden">
+            <span class="storedLinkCheck" aria-hidden="true">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+            <a id="setStoredLinkAnchor" href="#" target="_blank" rel="noopener noreferrer" class="storedLinkAnchor"></a>
+            <button type="button" class="storedLinkCopyBtn" id="setStoredLinkCopyBtn" aria-label="Copier le lien">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M9 9h10v10H9V9Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                <path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </button>
+          </div>
 
           <div class="rowBetween">
             <label class="check">

@@ -21,6 +21,9 @@
   const setEphemeral = $('ephemeral');
   const setMessage = $('setMessage');
   const setMessageText = $('setMessageText');
+  const setStoredLink = $('setStoredLink');
+  const setStoredLinkAnchor = $('setStoredLinkAnchor');
+  const setStoredLinkCopyBtn = $('setStoredLinkCopyBtn');
   const keyRandomBtn = $('keyRandomBtn');
   const keyCopyBtn = $('keyCopyBtn');
 
@@ -67,6 +70,20 @@
 
   function hideSetMessage() {
     setMessage.classList.add('hidden');
+  }
+
+  const STORED_LINK_BASE = 'https://vapor-locker.com';
+
+  function showStoredLink(key) {
+    if (!setStoredLink || !setStoredLinkAnchor) return;
+    const link = STORED_LINK_BASE + '?key=' + encodeURIComponent(key);
+    setStoredLinkAnchor.href = link;
+    setStoredLinkAnchor.textContent = link;
+    setStoredLink.classList.remove('hidden');
+  }
+
+  function hideStoredLink() {
+    if (setStoredLink) setStoredLink.classList.add('hidden');
   }
 
   function fadeOutAndClearValue() {
@@ -325,6 +342,7 @@
     ev.preventDefault();
     hideGetResult();
     hideSetMessage();
+    hideStoredLink();
 
     const token = await ensureCsrf();
     if (!token) {
@@ -384,8 +402,8 @@
             body: JSON.stringify({ key, value, ephemeral, csrf: refreshed })
           });
           if (retry.res.ok && retry.data && retry.data.ok) {
-            showSetMessage('OK');
             fadeOutAndClearValue();
+            showStoredLink(key);
             setNetStatus('Prêt');
             return;
           }
@@ -402,16 +420,36 @@
     }
 
     if (data && data.ok) {
-      showSetMessage('OK');
       fadeOutAndClearValue();
+      showStoredLink(key);
     } else if (data && data.error) {
       showSetMessage(data.error);
     } else {
-      showSetMessage('OK');
       fadeOutAndClearValue();
+      showStoredLink(key);
     }
     setNetStatus('Prêt');
   });
+
+  if (setStoredLinkCopyBtn && setStoredLinkAnchor) {
+    setStoredLinkCopyBtn.addEventListener('click', () => {
+      const link = (setStoredLinkAnchor.href || '').trim();
+      if (!link) return;
+      copyText(link).then(() => {
+        setStoredLinkCopyBtn.classList.add('copied');
+        window.setTimeout(() => setStoredLinkCopyBtn.classList.remove('copied'), 900);
+      });
+    });
+  }
+
+  // boot: fill RETRIEVE key from URL ?key=...
+  (function initFromUrl() {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const key = params.get('key');
+      if (key && getKey) getKey.value = key;
+    } catch (e) {}
+  })();
 
   // boot
   Promise.resolve()
