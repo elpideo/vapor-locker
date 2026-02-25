@@ -44,7 +44,7 @@ Au démarrage, les migrations SQL dans `migrations/` sont appliquées automatiqu
 - **Bouton GitHub** : icône en haut à droite, lien vers le dépôt source
 - **Fichiers statiques**: `GET /static/*` (JS, etc.)
 - **Paramètre d'URL `key`** : si l'utilisateur arrive avec `?key=...` dans l'URL (ex. `https://vapor-locker.com?key=ma-cle`), la valeur est pré-remplie dans le champ Key de la section RETRIEVE.
-- **Section STORE** : ordre des champs — d'abord le champ **Value** (contenu / secret), puis le champ **Key** (avec icône copier dans le champ et bouton pour générer une clé aléatoire).
+- **Section STORE** : ordre des champs — d'abord le champ **Key** (avec icône copier dans le champ et bouton pour générer une clé aléatoire), puis le champ **Value** (contenu / secret).
 - **Clé aléatoire**: dans la section STORE, un bouton icône à droite du champ Key génère une clé aléatoire (64 caractères alphanumériques cryptographiquement sécurisés). Une icône copier discrète à l'intérieur du champ permet de copier la clé dans le presse-papier.
 - **Option éphémère**: “EVAPORATING CONTENT” supprime la valeur après la première lecture (case à cocher et libellé mis en avant dans la couleur d’accent verte).
 - **Après STORE**: après enregistrement réussi, le champ valeur est estompé (fadeout) puis vidé. Sous le champ Key s'affichent une coche de validation à gauche, le lien vers `https://vapor-locker.com?key=...` (avec la clé enregistrée) et une icône pour copier ce lien (pas de message « OK »).
