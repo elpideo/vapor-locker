@@ -150,6 +150,12 @@ Share a secret. Let it evaporate.
 
 ---
 
+## 🖼 Interface (landing page)
+
+La page d’accueil (`static/index.html`) utilise un fond fixe en canvas : grille de petits carrés espacés sur fond noir. Un halo vert lumineux suit la souris (ou le doigt sur tactile) : seuls les carrés proches du pointeur s’illuminent en vert vif ; le reste reste dans le noir total.
+
+---
+
 ## 🔗 Link preview (Slack, réseaux sociaux)
 
 Le site expose des balises **Open Graph** et **Twitter Card** pour que le partage du lien affiche un aperçu (titre, description, image) sur Slack, LinkedIn, Facebook, X/Twitter, etc.

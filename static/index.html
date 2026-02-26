@@ -57,17 +57,20 @@
       --radius:18px;
     }
     *{box-sizing:border-box;}
-    html,body{height:100%;}
+    html,body{height:100%;overflow-x:hidden;}
     body{
       margin:0;
       font-family: "Geist Sans", ui-sans-serif, system-ui, sans-serif;
       color:var(--text);
-      background:
-        radial-gradient(900px 560px at 20% -10%, rgba(104,255,182,.10), transparent 60%),
-        radial-gradient(800px 520px at 100% 0%, rgba(104,255,182,.06), transparent 58%),
-        linear-gradient(180deg, var(--bg0), var(--bg1));
+      background:#000;
     }
-    .wrap{max-width:720px;margin:0 auto;padding:56px 18px 56px;}
+    #bgGrid{
+      position:fixed;
+      inset:0;
+      z-index:0;
+      pointer-events:none;
+    }
+    .wrap{max-width:720px;margin:0 auto;padding:56px 18px 56px;position:relative;z-index:1;}
     header{text-align:center;margin-bottom:18px;}
     .brandLogo{display:block;margin:0 auto 18px;width:25%;height:auto;}
     .brand{
@@ -309,6 +312,7 @@
   </style>
 </head>
 <body>
+  <canvas id="bgGrid"></canvas>
   <main class="wrap">
     <a class="githubBtn" href="https://github.com/elpideo/vapor-locker" target="_blank" rel="noopener noreferrer" aria-label="Source on GitHub">
       <svg class="icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
@@ -482,6 +486,85 @@
     </div>
   </main>
 
+  <script>
+    (function(){
+      var cv = document.getElementById('bgGrid');
+      var ctx = cv.getContext('2d');
+      var dpr = window.devicePixelRatio || 1;
+      var W, H;
+      var mx = -9999, my = -9999;
+
+      var SQ   = 32;
+      var GAP  = 6;
+      var STEP = SQ + GAP;
+      var R_MAX = 340;
+
+      function resize(){
+        W = window.innerWidth;
+        H = window.innerHeight;
+        cv.width  = W * dpr;
+        cv.height = H * dpr;
+        cv.style.width  = W + 'px';
+        cv.style.height = H + 'px';
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        draw();
+      }
+
+      function draw(){
+        ctx.clearRect(0, 0, W, H);
+
+        var cols = Math.ceil(W / STEP) + 1;
+        var rows = Math.ceil(H / STEP) + 1;
+
+        for(var r = 0; r < rows; r++){
+          for(var c = 0; c < cols; c++){
+            var x = c * STEP;
+            var y = r * STEP;
+            var cx = x + SQ * 0.5;
+            var cy = y + SQ * 0.5;
+            var dx = cx - mx;
+            var dy = cy - my;
+            var dist = Math.sqrt(dx * dx + dy * dy);
+
+            var t = 1 - dist / R_MAX;
+            if(t < 0) t = 0;
+            t = t * t;
+
+            var g = Math.round(255 * t);
+            var rb = Math.round(40 * t);
+            if(g < 1) continue;
+
+            ctx.fillStyle = 'rgb(' + rb + ',' + g + ',' + rb + ')';
+            ctx.fillRect(x, y, SQ, SQ);
+            ctx.fillStyle = '#000';
+            ctx.fillRect(x + 5, y + SQ - 5 - 7, 4, 7);
+          }
+        }
+      }
+
+      function onMove(e){
+        if(e.touches){
+          mx = e.touches[0].clientX;
+          my = e.touches[0].clientY;
+        } else {
+          mx = e.clientX;
+          my = e.clientY;
+        }
+        requestAnimationFrame(draw);
+      }
+
+      function onLeave(){
+        mx = -9999; my = -9999;
+        requestAnimationFrame(draw);
+      }
+
+      window.addEventListener('resize', resize);
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('touchmove', onMove, { passive: true });
+      document.addEventListener('mouseleave', onLeave);
+      resize();
+    })();
+  </script>
   <script defer src="/static/app.js"></script>
 </body>
 </html>
