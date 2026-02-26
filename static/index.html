@@ -157,14 +157,50 @@
       color:rgba(232,236,243,.86);
     }
     .ttlEvaporateOut{
-      animation: ttlEvaporateOut 900ms ease forwards;
-      will-change: opacity, transform, filter;
+      animation: ttlEvaporateOut 3s ease forwards;
+      will-change: opacity, transform, filter, color, text-shadow;
       transform-origin: left center;
     }
     @keyframes ttlEvaporateOut{
-      0%   { opacity: 1; filter: blur(0px); transform: translateY(0px) scale(1); }
-      45%  { opacity: .95; filter: blur(1px); transform: translateY(-1px) scale(.995); }
-      100% { opacity: 0; filter: blur(7px); transform: translateY(-8px) scale(.985); }
+      0%{
+        opacity: 1;
+        color: rgba(232,236,243,.86);
+        text-shadow: none;
+        filter: blur(0px);
+        transform: translateY(0px) scale(1, 1);
+      }
+      1%{
+        opacity: .98;
+        color: rgba(209, 231, 167, 0.92);
+        text-shadow: none;
+        filter: blur(0px);
+        transform: translateY(0px) scale(.998, 1.01);
+      }
+      2%{
+        opacity: .98;
+        color: rgba(219, 194, 54, 0.92);
+        text-shadow: none;
+        filter: blur(6px);
+        transform: translateY(-3px) scale(.998, 1.01);
+      }
+      7%{
+        opacity: .92;
+        color: var(--accent);
+        text-shadow:
+          0 6px 16px rgba(104,255,182,.22),
+          0 -2px 10px rgba(104,255,182,.10);
+        filter: blur(7px);
+        transform: translateY(-7px)  scale(.992, 1.08);
+      }
+      100%{
+        opacity: 0;
+        color: var(--accent);
+        text-shadow:
+          0 14px 34px rgba(104,255,182,.22),
+          0 -6px 20px rgba(104,255,182,.08);
+        filter: blur(7px);
+        transform: translateY(-78px) scale(1.05, 3.5);
+      }
     }
     .resultActions{
       position:absolute;
@@ -209,6 +245,8 @@
     .muted{color:var(--muted);font-weight:550;}
     .ephemeralLabel{color:var(--accent);}
     .evaporIcon{vertical-align:middle;margin-right:6px;}
+    .retrieveEphemeralIcon{display:inline-flex;align-items:center;justify-content:center;}
+    .retrieveEphemeralIcon.hidden{display:none;}
     .rowBetween{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;}
     .check{display:inline-flex;align-items:center;gap:10px;color:rgba(232,236,243,.86);}
     .check input{
@@ -425,6 +463,9 @@
             <pre id="resultDisplay" class="resultText">*******</pre>
             <pre id="resultPlain" class="srOnly"></pre>
             <div class="resultActions">
+              <span id="retrieveEphemeralIcon" class="retrieveEphemeralIcon hidden" title="data is evaporated" aria-label="data is evaporated">
+                <img src="/static/ephemeral.png" alt="" class="evaporIcon" width="32" height="32"/>
+              </span>
               <button class="eyeBtn" type="button" id="revealBtn" aria-label="Afficher" aria-pressed="false">
                 <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                   <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
@@ -538,7 +579,7 @@
         </ul>
       </section>
 
-      <section class="card">
+      <section class="Fcard">
         <div class="cardTitle">THREAT MODEL</div>
         <div class="cardBody">
         <p>Protects against: server compromise, database leak, curious admin. The server has no plaintext or keys to expose.</p>

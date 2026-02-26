@@ -14,6 +14,7 @@
   const getTtlText = $('getTtlText');
   const resultDisplay = $('resultDisplay');
   const resultPlain = $('resultPlain');
+  const retrieveEphemeralIcon = $('retrieveEphemeralIcon');
   const revealBtn = $('revealBtn');
   const copyBtn = $('copyBtn');
 
@@ -72,7 +73,7 @@
     getMessageText.textContent = text;
   }
 
-  function showGetValue(value) {
+  function showGetValue(value, isEphemeral) {
     getMessage.classList.add('hidden');
     getValue.classList.remove('hidden');
     if (getTtl) getTtl.classList.add('hidden');
@@ -83,6 +84,14 @@
     }
     clearEphemeralEvaporationTimers();
     if (getTtlText) getTtlText.classList.remove('ttlEvaporateOut');
+
+    if (retrieveEphemeralIcon) {
+      if (isEphemeral) {
+        retrieveEphemeralIcon.classList.remove('hidden');
+      } else {
+        retrieveEphemeralIcon.classList.add('hidden');
+      }
+    }
 
     resultPlain.textContent = (value || '').replace(/\r\n/g, '\n');
     resultDisplay.textContent = '*******';
@@ -95,6 +104,7 @@
   function hideGetResult() {
     getMessage.classList.add('hidden');
     getValue.classList.add('hidden');
+    if (retrieveEphemeralIcon) retrieveEphemeralIcon.classList.add('hidden');
     if (getTtl) getTtl.classList.add('hidden');
     if (getTtlText) getTtlText.textContent = '';
     if (retrieveCountdownTimer) {
@@ -193,7 +203,7 @@
     getTtlText.classList.remove('ttlEvaporateOut');
     getTtl.classList.remove('hidden');
     const start = 24 * 60 * 60 - 1; // 23:59:59
-    const steps = 20;
+    const steps = 10;
     const stepMs = 100;
     let i = 0;
     getTtlText.textContent = COUNTDOWN_PREFIX + formatSecondsToHms(start);
@@ -218,8 +228,8 @@
               getTtlText.classList.remove('ttlEvaporateOut');
               getTtlText.textContent = '';
             }
-          }, 950);
-        }, 220);
+          }, 3000);
+        }, 100);
       }
     }, stepMs);
   }
@@ -459,7 +469,7 @@
         }
       }
       if (decrypted !== null) {
-        showGetValue(decrypted);
+        showGetValue(decrypted, data.ephemeral === true);
         if (data.ephemeral === true) {
           animateEphemeralCountdown();
         } else if (typeof data.ttl_secs === 'number') {
