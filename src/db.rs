@@ -11,12 +11,21 @@ pub struct Db {
     pool: PgPool,
 }
 
+/// Entrée trouvée en DB (avec métadonnées pour TTL / éphémère).
+#[derive(Debug, Clone)]
+pub struct FoundEntry {
+    pub value: String,
+    pub ephemeral: bool,
+    pub created_at: OffsetDateTime,
+}
+
 /// Ligne matérialisée lors d’un `SELECT` d’entrée (avec id pour suppression éventuelle).
 #[derive(Debug, sqlx::FromRow)]
 struct FoundRow {
     id: i64,
     value: String,
     ephemeral: bool,
+    created_at: OffsetDateTime,
 }
 
 /// Ligne matérialisée lors d’un `SELECT` de sels.
@@ -88,7 +97,7 @@ impl Db {
     pub async fn get_value_by_hashes_maybe_delete_ephemeral(
         &self,
         key_hashes: Vec<String>,
-    ) -> anyhow::Result<Option<String>> {
+    ) -> anyhow::Result<Option<FoundEntry>> {
         if key_hashes.is_empty() {
             return Ok(None);
         }
@@ -97,7 +106,7 @@ impl Db {
 
         let row: Option<FoundRow> = sqlx::query_as(
             r#"
-            SELECT id, value, ephemeral
+            SELECT id, value, ephemeral, created_at
             FROM entries
             WHERE key_hash = ANY($1)
               AND created_at >= (now() - interval '24 hours')
@@ -125,7 +134,11 @@ impl Db {
         }
 
         tx.commit().await.context("commit tx")?;
-        Ok(Some(row.value))
+        Ok(Some(FoundEntry {
+            value: row.value,
+            ephemeral: row.ephemeral,
+            created_at: row.created_at,
+        }))
     }
 
     /// Retourne les sels valides et en crée un nouveau si nécessaire (rotation ~1h).

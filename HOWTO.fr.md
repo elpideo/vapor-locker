@@ -47,8 +47,9 @@ Au démarrage, les migrations SQL dans `migrations/` sont appliquées automatiqu
 - **Section STORE** : ordre des champs — d'abord le champ **Key** (avec icône copier dans le champ et bouton pour générer une clé aléatoire), puis le champ **Value** (contenu / secret).
 - **Clé aléatoire**: dans la section STORE, un bouton icône à droite du champ Key génère une clé aléatoire (64 caractères alphanumériques cryptographiquement sécurisés). Une icône copier discrète à l'intérieur du champ permet de copier la clé dans le presse-papier.
 - **Option éphémère**: “EVAPORATING CONTENT” supprime la valeur après la première lecture (case à cocher et libellé mis en avant dans la couleur d’accent verte).
-- **Après STORE**: après enregistrement réussi, le champ valeur est estompé (fadeout) puis vidé. Sous le champ Key s'affichent une coche de validation à gauche, le lien vers `https://vapor-locker.com?key=...` (avec la clé enregistrée) et une icône pour copier ce lien (pas de message « OK »).
+- **Après STORE**: après enregistrement réussi, le champ valeur est estompé (fadeout) puis vidé. Sous la ligne **EVAPORATING CONTENT** s'affichent une coche de validation, le libellé **“evaporating in”** puis un **compte à rebours 24h** (format `HH:MM:SS`, police monospace), puis le lien vers `https://vapor-locker.com?key=...` et une icône pour copier ce lien (pas de message « OK »).
 - **Masquage du résultat**: quand une valeur est trouvée, l’UI affiche `*******` par défaut. Une icône “œil” permet d’afficher/masquer la valeur, et l’icône “copier” copie toujours la vraie valeur.
+- **TTL après RETRIEVE**: quand une valeur est trouvée, le libellé **“evaporating in”** puis un compte à rebours (temps restant en base, `HH:MM:SS`) s’affiche **sous la valeur**. Si la valeur est éphémère, l’UI joue une animation rapide qui fait passer de `23:59:59` à `00:00:00` en ~2 secondes.
 - **Sauts de ligne**: l’affichage et la copie conservent les retours à la ligne du contenu stocké.
 - **Sections informatives** (sous le formulaire) : HOW IT WORKS, SECURITY MODEL, WHAT THE SERVER SEES, THREAT MODEL, DESIGN PRINCIPLES, SOURCE (lien GitHub).
 
@@ -62,9 +63,10 @@ Au démarrage, les migrations SQL dans `migrations/` sont appliquées automatiqu
   - Le navigateur envoie uniquement:
     - `key_hash`: un hash dérivé de (clé + sel)
     - `value`: une valeur **chiffrée** `{ v, iv, ct }` (AES‑GCM)
-- `POST /api/get` (JSON) → `{ "found": true, "value": { "v": 1, "iv": "...", "ct": "..." } }` ou `{ "found": false }`
+- `POST /api/get` (JSON) → `{ "found": true, "value": { "v": 1, "iv": "...", "ct": "..." }, "ttl_secs": 123, "ephemeral": false }` ou `{ "found": false }`
   - Le navigateur envoie une liste de `hashes` (un par sel valide).
   - Le serveur ne voit jamais la clé en clair et ne renvoie que du chiffré.
+  - En cas de limitation par IP: `429` avec `{ "error": "to many request" }` (même message côté STORE et RETRIEVE).
 
 Exemple minimal (set):
 (la dérivation PBKDF2‑SHA256 (200k itérations) et le chiffrement AES‑GCM sont faits dans `static/app.js` via WebCrypto)

@@ -255,6 +255,14 @@
       margin-top:8px;
     }
     .storedLinkRow.hidden{display:none;}
+    .storedCountdown{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+      color: rgba(232,236,243,.86);
+      opacity: .9;
+      flex: 0 0 auto;
+    }
     .storedLinkCheck{
       flex:0 0 auto;
       width:28px;height:28px;
@@ -309,6 +317,42 @@
     }
     .githubBtn:hover{color:var(--accent);border-color:rgba(104,255,182,.3);background:var(--card2);}
     .githubBtn .icon{width:20px;height:20px;}
+
+    .tabNav{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:6px;
+      padding:4px;
+      border-radius:12px;
+      background:rgba(7,8,10,.9);
+      border:1px solid rgba(255,255,255,.06);
+      margin-bottom:16px;
+    }
+    .tabButton{
+      flex:1 1 0;
+      border-radius:9px;
+      border:0;
+      background:transparent;
+      color:var(--muted);
+      font-weight:700;
+      font-size:12px;
+      letter-spacing:.16em;
+      text-transform:uppercase;
+      padding:10px 12px;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      transition:background .12s ease,color .12s ease,box-shadow .12s ease;
+    }
+    .tabButton.is-active{
+      background:rgba(255,255,255,.06);
+      color:var(--accent);
+      box-shadow:0 0 0 1px rgba(255,255,255,.05),0 10px 26px rgba(0,0,0,.55) inset;
+    }
+    .tabPanel{display:none;}
+    .tabPanel.is-active{display:block;}
   </style>
 </head>
 <body>
@@ -328,104 +372,130 @@
       </header>
 
       <section class="card">
-        <div class="cardTitle">RETRIEVE</div>
-        <form id="getForm" class="fieldRow" autocomplete="off">
-          <label class="srOnly" for="get_key">Key</label>
-          <input id="get_key" name="key" type="text" maxlength="255" placeholder="Key" autocomplete="off"/>
-          <button class="actionBtn" type="submit" aria-label="Get">
-            <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M5 12h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-              <path d="M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
+        <div class="tabNav" role="tablist" aria-label="Retrieve or store a secret">
+          <button
+            class="tabButton is-active"
+            id="tab-retrieve"
+            type="button"
+            role="tab"
+            aria-selected="true"
+            aria-controls="panel-retrieve"
+          >
+            RETRIEVE
           </button>
-        </form>
-
-        <div id="getMessage" class="resultSurface hidden">
-          <div class="pill" id="getMessageText"></div>
+          <button
+            class="tabButton"
+            id="tab-store"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            aria-controls="panel-store"
+          >
+            STORE
+          </button>
         </div>
 
-        <div id="getValue" class="resultSurface hidden">
-          <pre id="resultDisplay" class="resultText">*******</pre>
-          <pre id="resultPlain" class="srOnly"></pre>
-          <div class="resultActions">
-            <button class="eyeBtn" type="button" id="revealBtn" aria-label="Afficher" aria-pressed="false">
+        <div id="panel-retrieve" class="tabPanel is-active" role="tabpanel" aria-labelledby="tab-retrieve">
+          <form id="getForm" class="fieldRow" autocomplete="off">
+            <label class="srOnly" for="get_key">Key</label>
+            <input id="get_key" name="key" type="text" maxlength="255" placeholder="Key" autocomplete="off"/>
+            <button class="actionBtn" type="submit" aria-label="Get">
               <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-                <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="currentColor" stroke-width="2"/>
+                <path d="M5 12h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <path d="M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
-              <span class="srOnly">Afficher</span>
             </button>
-            <button class="copyBtn" type="button" id="copyBtn" aria-label="Copier">
-              <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M9 9h10v10H9V9Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-                <path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-              </svg>
-              <span class="srOnly">Copier</span>
-            </button>
+          </form>
+
+          <div id="getMessage" class="resultSurface hidden">
+            <div class="pill" id="getMessageText"></div>
+          </div>
+
+          <div id="getValue" class="resultSurface hidden">
+            <pre id="resultDisplay" class="resultText">*******</pre>
+            <pre id="resultPlain" class="srOnly"></pre>
+            <div class="resultActions">
+              <button class="eyeBtn" type="button" id="revealBtn" aria-label="Afficher" aria-pressed="false">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                  <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                <span class="srOnly">Afficher</span>
+              </button>
+              <button class="copyBtn" type="button" id="copyBtn" aria-label="Copier">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M9 9h10v10H9V9Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                  <path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                <span class="srOnly">Copier</span>
+              </button>
+            </div>
+          </div>
+
+          <div id="getTtl" class="resultSurface hidden">
+            <pre id="getTtlText" class="resultText"></pre>
           </div>
         </div>
-      </section>
 
-      <div class="divider" aria-hidden="true"></div>
+        <div id="panel-store" class="tabPanel" role="tabpanel" aria-labelledby="tab-store" hidden>
+          <form id="setForm" class="fieldCol" autocomplete="off">
+            <div class="keyRow">
+              <div class="keyInputWrap">
+                <label class="srOnly" for="set_key">Key</label>
+                <input id="set_key" name="key" type="text" maxlength="255" placeholder="Key" autocomplete="off"/>
+                <button type="button" class="keyCopyInside" id="keyCopyBtn" aria-label="Copier la clé">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M9 9h10v10H9V9Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                    <path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  </svg>
+                </button>
+              </div>
+              <button type="button" class="keyRandomBtn" id="keyRandomBtn" aria-label="Générer une clé aléatoire">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <rect x="4" y="4" width="16" height="16" rx="3" stroke="currentColor" stroke-width="2"/>
+                  <circle cx="8" cy="8" r="1.2" fill="currentColor"/>
+                  <circle cx="16" cy="16" r="1.2" fill="currentColor"/>
+                  <circle cx="12" cy="12" r="1.2" fill="currentColor"/>
+                </svg>
+              </button>
+            </div>
 
-      <section class="card">
-        <div class="cardTitle">STORE</div>
-        <form id="setForm" class="fieldCol" autocomplete="off">
-          <div class="keyRow">
-            <div class="keyInputWrap">
-              <label class="srOnly" for="set_key">Key</label>
-              <input id="set_key" name="key" type="text" maxlength="255" placeholder="Key" autocomplete="off"/>
-              <button type="button" class="keyCopyInside" id="keyCopyBtn" aria-label="Copier la clé">
+            <label class="srOnly" for="set_value">Value</label>
+            <textarea id="set_value" name="value" maxlength="100000" placeholder="Content or Secret"></textarea>
+
+            <div class="rowBetween">
+              <label class="check">
+                <input id="ephemeral" name="ephemeral" type="checkbox"/>
+                <span class="muted ephemeralLabel" title="Content will be evaporated after the first reading"><img src="/static/evapor.png" alt="" class="evaporIcon" width="20" height="20"/> EVAPORATING CONTENT</span>
+              </label>
+              <button class="actionBtn" type="submit" aria-label="Set">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M5 12h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </div>
+
+            <div id="setStoredLink" class="storedLinkRow hidden">
+              <span class="storedLinkCheck" aria-hidden="true">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </span>
+              <span id="setStoredCountdown" class="storedCountdown"></span>
+              <a id="setStoredLinkAnchor" href="#" target="_blank" rel="noopener noreferrer" class="storedLinkAnchor"></a>
+              <button type="button" class="storedLinkCopyBtn" id="setStoredLinkCopyBtn" aria-label="Copier le lien">
                 <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                   <path d="M9 9h10v10H9V9Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
                   <path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                 </svg>
               </button>
             </div>
-            <button type="button" class="keyRandomBtn" id="keyRandomBtn" aria-label="Générer une clé aléatoire">
-              <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <rect x="4" y="4" width="16" height="16" rx="3" stroke="currentColor" stroke-width="2"/>
-                <circle cx="8" cy="8" r="1.2" fill="currentColor"/>
-                <circle cx="16" cy="16" r="1.2" fill="currentColor"/>
-                <circle cx="12" cy="12" r="1.2" fill="currentColor"/>
-              </svg>
-            </button>
+          </form>
+
+          <div id="setMessage" class="resultSurface hidden">
+            <div class="pill" id="setMessageText"></div>
           </div>
-
-          <label class="srOnly" for="set_value">Value</label>
-          <textarea id="set_value" name="value" maxlength="100000" placeholder="Content or Secret"></textarea>
-
-          <div id="setStoredLink" class="storedLinkRow hidden">
-            <span class="storedLinkCheck" aria-hidden="true">
-              <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </span>
-            <a id="setStoredLinkAnchor" href="#" target="_blank" rel="noopener noreferrer" class="storedLinkAnchor"></a>
-            <button type="button" class="storedLinkCopyBtn" id="setStoredLinkCopyBtn" aria-label="Copier le lien">
-              <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M9 9h10v10H9V9Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-                <path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-              </svg>
-            </button>
-          </div>
-
-          <div class="rowBetween">
-            <label class="check">
-              <input id="ephemeral" name="ephemeral" type="checkbox"/>
-              <span class="muted ephemeralLabel" title="Content will be evaporated after the first reading"><img src="/static/evapor.png" alt="" class="evaporIcon" width="20" height="20"/> EVAPORATING CONTENT</span>
-            </label>
-            <button class="actionBtn" type="submit" aria-label="Set">
-              <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M5 12h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                <path d="M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </button>
-          </div>
-        </form>
-
-        <div id="setMessage" class="resultSurface hidden">
-          <div class="pill" id="setMessageText"></div>
         </div>
       </section>
 
@@ -529,12 +599,13 @@
             var t = 1 - dist / R_MAX;
             if(t < 0) t = 0;
             t = t * t;
-
+            // 68ffb6
+            var rr = Math.round(104 * t);
             var g = Math.round(255 * t);
-            var rb = Math.round(40 * t);
+            var b = Math.round(182 * t);
             if(g < 1) continue;
 
-            ctx.fillStyle = 'rgb(' + rb + ',' + g + ',' + rb + ')';
+            ctx.fillStyle = 'rgb(' + rr + ',' + g + ',' + b + ')';
             ctx.fillRect(x, y, SQ, SQ);
             ctx.fillStyle = '#000';
             ctx.fillRect(x + 5, y + SQ - 5 - 7, 4, 7);
@@ -563,6 +634,38 @@
       document.addEventListener('touchmove', onMove, { passive: true });
       document.addEventListener('mouseleave', onLeave);
       resize();
+    })();
+  </script>
+  <script>
+    (function(){
+      var retrieveTab = document.getElementById('tab-retrieve');
+      var storeTab = document.getElementById('tab-store');
+      var retrievePanel = document.getElementById('panel-retrieve');
+      var storePanel = document.getElementById('panel-store');
+
+      if (!retrieveTab || !storeTab || !retrievePanel || !storePanel) return;
+
+      function activate(which){
+        var isRetrieve = which === 'retrieve';
+        retrieveTab.classList.toggle('is-active', isRetrieve);
+        storeTab.classList.toggle('is-active', !isRetrieve);
+        retrievePanel.classList.toggle('is-active', isRetrieve);
+        storePanel.classList.toggle('is-active', !isRetrieve);
+        retrievePanel.hidden = !isRetrieve;
+        storePanel.hidden = isRetrieve;
+      }
+
+      retrieveTab.addEventListener('click', function(){
+        activate('retrieve');
+        retrieveTab.setAttribute('aria-selected', 'true');
+        storeTab.setAttribute('aria-selected', 'false');
+      });
+
+      storeTab.addEventListener('click', function(){
+        activate('store');
+        retrieveTab.setAttribute('aria-selected', 'false');
+        storeTab.setAttribute('aria-selected', 'true');
+      });
     })();
   </script>
   <script defer src="/static/app.js"></script>

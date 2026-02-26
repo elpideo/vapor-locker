@@ -8,6 +8,7 @@ use axum::{
 };
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use serde::{Deserialize, Serialize};
+use time::{Duration, OffsetDateTime};
 use tracing::info;
 
 use crate::{models, AppState};
@@ -26,6 +27,10 @@ struct ApiGetResponse {
     found: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     value: Option<ValueEnc>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    ttl_secs: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    ephemeral: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     error: Option<String>,
 }
@@ -145,7 +150,13 @@ pub async fn api_set(
 
     let ip = client_ip(&headers, addr, state.trust_proxy);
     if state.ip_cache.seen_recently(ip) {
-        return json(StatusCode::OK, ApiOk { ok: true, error: None });
+        return json(
+            StatusCode::TOO_MANY_REQUESTS,
+            ApiOk {
+                ok: false,
+                error: Some("to many request".to_string()),
+            },
+        );
     }
 
     let key_hash = req.key_hash.unwrap_or_default();
@@ -243,11 +254,13 @@ pub async fn api_get(
 
     if state.ip_cache.seen_recently(ip) {
         return json(
-            StatusCode::OK,
+            StatusCode::TOO_MANY_REQUESTS,
             ApiGetResponse {
                 found: false,
                 value: None,
-                error: None,
+                ttl_secs: None,
+                ephemeral: None,
+                error: Some("to many request".to_string()),
             },
         );
     }
@@ -259,6 +272,8 @@ pub async fn api_get(
             ApiGetResponse {
                 found: false,
                 value: None,
+                ttl_secs: None,
+                ephemeral: None,
                 error: Some("Validation error: hashes required".to_string()),
             },
         );
@@ -269,6 +284,8 @@ pub async fn api_get(
             ApiGetResponse {
                 found: false,
                 value: None,
+                ttl_secs: None,
+                ephemeral: None,
                 error: Some("Validation error: too many hashes".to_string()),
             },
         );
@@ -282,6 +299,8 @@ pub async fn api_get(
                 ApiGetResponse {
                     found: false,
                     value: None,
+                    ttl_secs: None,
+                    ephemeral: None,
                     error: Some("Validation error: empty hash".to_string()),
                 },
             );
@@ -294,6 +313,8 @@ pub async fn api_get(
                     ApiGetResponse {
                         found: false,
                         value: None,
+                        ttl_secs: None,
+                        ephemeral: None,
                         error: Some(format!("Validation error: {e}")),
                     },
                 )
@@ -302,7 +323,7 @@ pub async fn api_get(
         validated_hashes.push(v.key);
     }
 
-    let value = match state
+    let entry = match state
         .db
         .get_value_by_hashes_maybe_delete_ephemeral(validated_hashes)
         .await
@@ -314,32 +335,42 @@ pub async fn api_get(
                 ApiGetResponse {
                     found: false,
                     value: None,
+                    ttl_secs: None,
+                    ephemeral: None,
                     error: Some(format!("Internal error: {e}")),
                 },
             )
         }
     };
 
-    match value {
-        Some(v) => {
-            let parsed: ValueEnc = match serde_json::from_str(&v) {
+    match entry {
+        Some(e) => {
+            let parsed: ValueEnc = match serde_json::from_str(&e.value) {
                 Ok(p) => p,
-                Err(e) => {
+                Err(err) => {
                     return json(
                         StatusCode::INTERNAL_SERVER_ERROR,
                         ApiGetResponse {
                             found: false,
                             value: None,
-                            error: Some(format!("Internal error: corrupted payload ({e})")),
+                            ttl_secs: None,
+                            ephemeral: None,
+                            error: Some(format!("Internal error: corrupted payload ({err})")),
                         },
                     )
                 }
             };
+
+            let now = OffsetDateTime::now_utc();
+            let ttl = Duration::hours(24) - (now - e.created_at);
+            let ttl_secs = ttl.whole_seconds().max(0) as u64;
             json(
                 StatusCode::OK,
                 ApiGetResponse {
                     found: true,
                     value: Some(parsed),
+                    ttl_secs: Some(ttl_secs),
+                    ephemeral: Some(e.ephemeral),
                     error: None,
                 },
             )
@@ -349,6 +380,8 @@ pub async fn api_get(
             ApiGetResponse {
                 found: false,
                 value: None,
+                ttl_secs: None,
+                ephemeral: None,
                 error: None,
             },
         ),

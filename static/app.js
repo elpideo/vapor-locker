@@ -10,6 +10,8 @@
   const getMessage = $('getMessage');
   const getMessageText = $('getMessageText');
   const getValue = $('getValue');
+  const getTtl = $('getTtl');
+  const getTtlText = $('getTtlText');
   const resultDisplay = $('resultDisplay');
   const resultPlain = $('resultPlain');
   const revealBtn = $('revealBtn');
@@ -24,16 +26,20 @@
   const setStoredLink = $('setStoredLink');
   const setStoredLinkAnchor = $('setStoredLinkAnchor');
   const setStoredLinkCopyBtn = $('setStoredLinkCopyBtn');
+  const setStoredCountdown = $('setStoredCountdown');
   const keyRandomBtn = $('keyRandomBtn');
   const keyCopyBtn = $('keyCopyBtn');
 
   let csrfToken = null;
   let revealed = false;
   let salts = null; // base64url strings, most recent first
+  let storeCountdownTimer = null;
+  let retrieveCountdownTimer = null;
 
   const ITERATIONS = 200000;
   const textEncoder = new TextEncoder();
   const textDecoder = new TextDecoder();
+  const COUNTDOWN_PREFIX = 'Evaporating in ';
 
   function setNetStatus(text) {
     if (!netStatus) return;
@@ -42,6 +48,11 @@
 
   function showGetMessage(text) {
     getValue.classList.add('hidden');
+    if (getTtl) getTtl.classList.add('hidden');
+    if (retrieveCountdownTimer) {
+      window.clearInterval(retrieveCountdownTimer);
+      retrieveCountdownTimer = null;
+    }
     getMessage.classList.remove('hidden');
     getMessageText.textContent = text;
   }
@@ -49,6 +60,12 @@
   function showGetValue(value) {
     getMessage.classList.add('hidden');
     getValue.classList.remove('hidden');
+    if (getTtl) getTtl.classList.add('hidden');
+    if (getTtlText) getTtlText.textContent = '';
+    if (retrieveCountdownTimer) {
+      window.clearInterval(retrieveCountdownTimer);
+      retrieveCountdownTimer = null;
+    }
 
     resultPlain.textContent = (value || '').replace(/\r\n/g, '\n');
     resultDisplay.textContent = '*******';
@@ -61,6 +78,12 @@
   function hideGetResult() {
     getMessage.classList.add('hidden');
     getValue.classList.add('hidden');
+    if (getTtl) getTtl.classList.add('hidden');
+    if (getTtlText) getTtlText.textContent = '';
+    if (retrieveCountdownTimer) {
+      window.clearInterval(retrieveCountdownTimer);
+      retrieveCountdownTimer = null;
+    }
   }
 
   function showSetMessage(text) {
@@ -84,6 +107,11 @@
 
   function hideStoredLink() {
     if (setStoredLink) setStoredLink.classList.add('hidden');
+    if (storeCountdownTimer) {
+      window.clearInterval(storeCountdownTimer);
+      storeCountdownTimer = null;
+    }
+    if (setStoredCountdown) setStoredCountdown.textContent = '';
   }
 
   function fadeOutAndClearValue() {
@@ -93,6 +121,71 @@
       setValue.value = '';
       setValue.classList.remove('valueFadeOut');
     }, 420);
+  }
+
+  function formatSecondsToHms(totalSeconds) {
+    const s = Math.max(0, Math.floor(totalSeconds || 0));
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const ss = s % 60;
+    const pad2 = (n) => String(n).padStart(2, '0');
+    return String(h).padStart(2, '0') + ':' + pad2(m) + ':' + pad2(ss);
+  }
+
+  function startStoreCountdown() {
+    if (!setStoredCountdown) return;
+    if (storeCountdownTimer) window.clearInterval(storeCountdownTimer);
+    const deadline = Date.now() + 24 * 60 * 60 * 1000;
+    const tick = () => {
+      const remainingMs = deadline - Date.now();
+      const remainingSecs = Math.max(0, Math.floor((remainingMs + 999) / 1000));
+      setStoredCountdown.textContent = COUNTDOWN_PREFIX + formatSecondsToHms(remainingSecs);
+      if (remainingSecs <= 0 && storeCountdownTimer) {
+        window.clearInterval(storeCountdownTimer);
+        storeCountdownTimer = null;
+      }
+    };
+    tick();
+    storeCountdownTimer = window.setInterval(tick, 1000);
+  }
+
+  function startRetrieveCountdown(ttlSeconds) {
+    if (!getTtl || !getTtlText) return;
+    if (retrieveCountdownTimer) window.clearInterval(retrieveCountdownTimer);
+    getTtl.classList.remove('hidden');
+    const deadline = Date.now() + Math.max(0, Math.floor(ttlSeconds || 0)) * 1000;
+    const tick = () => {
+      const remainingMs = deadline - Date.now();
+      const remainingSecs = Math.max(0, Math.floor((remainingMs + 999) / 1000));
+      getTtlText.textContent = COUNTDOWN_PREFIX + formatSecondsToHms(remainingSecs);
+      if (remainingSecs <= 0 && retrieveCountdownTimer) {
+        window.clearInterval(retrieveCountdownTimer);
+        retrieveCountdownTimer = null;
+      }
+    };
+    tick();
+    retrieveCountdownTimer = window.setInterval(tick, 1000);
+  }
+
+  function animateEphemeralCountdown() {
+    if (!getTtl || !getTtlText) return;
+    if (retrieveCountdownTimer) window.clearInterval(retrieveCountdownTimer);
+    getTtl.classList.remove('hidden');
+    const start = 24 * 60 * 60 - 1; // 23:59:59
+    const steps = 20;
+    const stepMs = 100;
+    let i = 0;
+    getTtlText.textContent = COUNTDOWN_PREFIX + formatSecondsToHms(start);
+    retrieveCountdownTimer = window.setInterval(() => {
+      i += 1;
+      const t = Math.min(1, i / steps);
+      const secs = Math.max(0, Math.round(start * (1 - t)));
+      getTtlText.textContent = COUNTDOWN_PREFIX + formatSecondsToHms(secs);
+      if (i >= steps && retrieveCountdownTimer) {
+        window.clearInterval(retrieveCountdownTimer);
+        retrieveCountdownTimer = null;
+      }
+    }, stepMs);
   }
 
   function generateRandomKey(length) {
@@ -307,8 +400,12 @@
       body: JSON.stringify({ hashes })
     });
     if (!res.ok) {
-      const msg = (data && data.error) ? data.error : ('HTTP ' + res.status);
-      showGetMessage(msg);
+      if (res.status === 429 || (data && data.error === 'to many request')) {
+        showGetMessage('to many request');
+      } else {
+        const msg = (data && data.error) ? data.error : ('HTTP ' + res.status);
+        showGetMessage(msg);
+      }
       setNetStatus('Prêt');
       return;
     }
@@ -327,6 +424,11 @@
       }
       if (decrypted !== null) {
         showGetValue(decrypted);
+        if (data.ephemeral === true) {
+          animateEphemeralCountdown();
+        } else if (typeof data.ttl_secs === 'number') {
+          startRetrieveCountdown(data.ttl_secs);
+        }
       } else {
         showGetMessage('Déchiffrement impossible (clé incorrecte ?)');
       }
@@ -390,6 +492,11 @@
     });
 
     if (!res.ok) {
+      if (res.status === 429 || (data && data.error === 'to many request')) {
+        showSetMessage('to many request');
+        setNetStatus('Prêt');
+        return;
+      }
       // if CSRF mismatch, try refresh once
       if (res.status === 403) {
         csrfToken = null;
@@ -401,9 +508,15 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ key, value, ephemeral, csrf: refreshed })
           });
+          if (retry.res.status === 429 || (retry.data && retry.data.error === 'to many request')) {
+            showSetMessage('to many request');
+            setNetStatus('Prêt');
+            return;
+          }
           if (retry.res.ok && retry.data && retry.data.ok) {
             fadeOutAndClearValue();
             showStoredLink(key);
+            startStoreCountdown();
             setNetStatus('Prêt');
             return;
           }
@@ -422,11 +535,13 @@
     if (data && data.ok) {
       fadeOutAndClearValue();
       showStoredLink(key);
+      startStoreCountdown();
     } else if (data && data.error) {
       showSetMessage(data.error);
     } else {
       fadeOutAndClearValue();
       showStoredLink(key);
+      startStoreCountdown();
     }
     setNetStatus('Prêt');
   });

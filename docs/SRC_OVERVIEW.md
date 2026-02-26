@@ -199,7 +199,7 @@ Types **publics** (utilisés par Axum pour le body JSON) :
     - En cas d’échec: `403 Forbidden` avec `{ ok:false, error:"Forbidden" }`.
   - **2) IP client + anti-rejeu**
     - IP = `client_ip(&headers, addr, state.trust_proxy)`
-    - Si `state.ip_cache.seen_recently(ip)` → renvoie `200 { ok:true }` (court-circuit).
+    - Si `state.ip_cache.seen_recently(ip)` → renvoie `429 { ok:false, error:"to many request" }` (court-circuit).
   - **3) Validation**
     - `key_hash` doit être présent/non vide, sinon `400`.
     - `value` doit être présent, sinon `400`.
@@ -210,7 +210,8 @@ Types **publics** (utilisés par Axum pour le body JSON) :
   - **5) DB**
     - `state.db.insert(&key, &value, ephemeral)` ; si erreur → `500`.
   - **Réponse**
-    - `200 OK`: `{ ok:true }` (même si anti-rejeu déclenché)
+    - `200 OK`: `{ ok:true }`
+    - `429`: `{ ok:false, error:"to many request" }`
     - `400/403/500`: selon cas ci-dessus.
 
 - **`api_get(State(state), headers, ConnectInfo(addr), Json(req)) -> Response`** (publique, async)
@@ -218,7 +219,7 @@ Types **publics** (utilisés par Axum pour le body JSON) :
     - IP = `client_ip(...)`
     - Log `event="get"`, `ip` uniquement.
   - **2) Anti-rejeu**
-    - Si `state.ip_cache.seen_recently(ip)` → renvoie `200 { found:false }`.
+    - Si `state.ip_cache.seen_recently(ip)` → renvoie `429 { found:false, error:"to many request" }`.
   - **3) Validation**
     - `hashes` requis et non vide, sinon `400`.
     - Max 256 hashes, sinon `400`.
@@ -231,9 +232,10 @@ Types **publics** (utilisés par Axum pour le body JSON) :
     - Si parsing échoue → `500` (“corrupted payload”).
   - **Réponse**
     - `200 OK`:
-      - trouvé: `{ found:true, value:{ v, iv, ct } }`
+      - trouvé: `{ found:true, value:{ v, iv, ct }, ttl_secs, ephemeral }`
       - non trouvé: `{ found:false }`
     - `400/500`: validation / erreur interne.
+    - `429`: `{ found:false, error:"to many request" }`
 
 - **`client_ip(headers: &HeaderMap, addr: SocketAddr, trust_proxy: bool) -> IpAddr`** (privée)
   - Si `trust_proxy=true`, tente `x-forwarded-for` (prend la **première** IP de la liste).
@@ -261,6 +263,7 @@ Types **publics** (utilisés par Axum pour le body JSON) :
   - `id: i64`
   - `value: String`
   - `ephemeral: bool`
+  - `created_at: OffsetDateTime`
   - **Rôle**: forme de la ligne renvoyée par la requête de lecture (avec lock).
 
 - **`SaltRow`** (privé, `sqlx::FromRow`)
@@ -293,7 +296,7 @@ Toutes les fonctions ci-dessous retournent `anyhow::Result<...>` et ajoutent du 
   - Insère dans `entries (key_hash, value, ephemeral)`.
   - Ne retourne pas l’ID; simple write.
 
-- **`Db::get_value_by_hashes_maybe_delete_ephemeral(&self, key_hashes: Vec<String>) -> anyhow::Result<Option<String>>`** (pub, async)
+- **`Db::get_value_by_hashes_maybe_delete_ephemeral(&self, key_hashes: Vec<String>) -> anyhow::Result<Option<FoundEntry>>`** (pub, async)
   - **But**: retourner la **valeur la plus récente** (sur un ensemble de `key_hash`) et la supprimer si `ephemeral=true`.
   - **Étapes**
     - Si `key_hashes` vide → `Ok(None)`.
@@ -307,7 +310,7 @@ Toutes les fonctions ci-dessous retournent `anyhow::Result<...>` et ajoutent du 
       - `FOR UPDATE` (verrou de ligne)
     - Si rien trouvé: commit “best effort” puis `Ok(None)`.
     - Si trouvé et `ephemeral=true`: `DELETE FROM entries WHERE id = $1` dans la même transaction.
-    - Commit puis `Ok(Some(value))`.
+    - Commit puis `Ok(Some(FoundEntry { value, ephemeral, created_at }))`.
 
 - **`Db::list_valid_salts_with_rotation(&self) -> anyhow::Result<Vec<Vec<u8>>>`** (pub, async)
   - **Rotation**: s’assure qu’un sel récent existe.
