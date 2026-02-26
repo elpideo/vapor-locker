@@ -156,6 +156,16 @@
       word-break:break-word;
       color:rgba(232,236,243,.86);
     }
+    .ttlEvaporateOut{
+      animation: ttlEvaporateOut 900ms ease forwards;
+      will-change: opacity, transform, filter;
+      transform-origin: left center;
+    }
+    @keyframes ttlEvaporateOut{
+      0%   { opacity: 1; filter: blur(0px); transform: translateY(0px) scale(1); }
+      45%  { opacity: .95; filter: blur(1px); transform: translateY(-1px) scale(.995); }
+      100% { opacity: 0; filter: blur(7px); transform: translateY(-8px) scale(.985); }
+    }
     .resultActions{
       position:absolute;
       top:10px;right:10px;

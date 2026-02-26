@@ -35,11 +35,24 @@
   let salts = null; // base64url strings, most recent first
   let storeCountdownTimer = null;
   let retrieveCountdownTimer = null;
+  let ephemeralEvaporateTimeout = null;
+  let ephemeralEvaporateCleanupTimeout = null;
 
   const ITERATIONS = 200000;
   const textEncoder = new TextEncoder();
   const textDecoder = new TextDecoder();
-  const COUNTDOWN_PREFIX = 'Evaporating in ';
+  const COUNTDOWN_PREFIX = 'evaporating in ';
+
+  function clearEphemeralEvaporationTimers() {
+    if (ephemeralEvaporateTimeout) {
+      window.clearTimeout(ephemeralEvaporateTimeout);
+      ephemeralEvaporateTimeout = null;
+    }
+    if (ephemeralEvaporateCleanupTimeout) {
+      window.clearTimeout(ephemeralEvaporateCleanupTimeout);
+      ephemeralEvaporateCleanupTimeout = null;
+    }
+  }
 
   function setNetStatus(text) {
     if (!netStatus) return;
@@ -53,6 +66,8 @@
       window.clearInterval(retrieveCountdownTimer);
       retrieveCountdownTimer = null;
     }
+    clearEphemeralEvaporationTimers();
+    if (getTtlText) getTtlText.classList.remove('ttlEvaporateOut');
     getMessage.classList.remove('hidden');
     getMessageText.textContent = text;
   }
@@ -66,6 +81,8 @@
       window.clearInterval(retrieveCountdownTimer);
       retrieveCountdownTimer = null;
     }
+    clearEphemeralEvaporationTimers();
+    if (getTtlText) getTtlText.classList.remove('ttlEvaporateOut');
 
     resultPlain.textContent = (value || '').replace(/\r\n/g, '\n');
     resultDisplay.textContent = '*******';
@@ -84,6 +101,8 @@
       window.clearInterval(retrieveCountdownTimer);
       retrieveCountdownTimer = null;
     }
+    clearEphemeralEvaporationTimers();
+    if (getTtlText) getTtlText.classList.remove('ttlEvaporateOut');
   }
 
   function showSetMessage(text) {
@@ -170,6 +189,8 @@
   function animateEphemeralCountdown() {
     if (!getTtl || !getTtlText) return;
     if (retrieveCountdownTimer) window.clearInterval(retrieveCountdownTimer);
+    clearEphemeralEvaporationTimers();
+    getTtlText.classList.remove('ttlEvaporateOut');
     getTtl.classList.remove('hidden');
     const start = 24 * 60 * 60 - 1; // 23:59:59
     const steps = 20;
@@ -184,6 +205,21 @@
       if (i >= steps && retrieveCountdownTimer) {
         window.clearInterval(retrieveCountdownTimer);
         retrieveCountdownTimer = null;
+
+        // Hold 00:00:00 briefly, then "evaporate" the countdown away.
+        ephemeralEvaporateTimeout = window.setTimeout(() => {
+          if (!getTtlText || !getTtl) return;
+          getTtlText.classList.remove('ttlEvaporateOut');
+          void getTtlText.offsetWidth; // restart animation reliably
+          getTtlText.classList.add('ttlEvaporateOut');
+          ephemeralEvaporateCleanupTimeout = window.setTimeout(() => {
+            if (getTtl) getTtl.classList.add('hidden');
+            if (getTtlText) {
+              getTtlText.classList.remove('ttlEvaporateOut');
+              getTtlText.textContent = '';
+            }
+          }, 950);
+        }, 220);
       }
     }, stepMs);
   }
