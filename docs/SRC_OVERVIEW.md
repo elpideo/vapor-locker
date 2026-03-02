@@ -17,7 +17,7 @@ Les mêmes éléments sont aussi documentés **directement dans le code** via de
 - `src/db.rs`
 - `src/csrf.rs` — protection CSRF (module, types, méthodes)
 - `src/models.rs` — modèles d'entrée et validation
-- `src/security.rs` — cache IP anti-spam
+- `src/security.rs` — limiteur d’abus par IP (score x, 429 + Retry-After)
 
 ---
 
@@ -48,7 +48,7 @@ Ces modules sont attendus dans `src/*.rs` et sont utilisés pour :
 - `handlers`: endpoints HTTP JSON
 - `logging`: initialisation d’un logger (et garde de rotation)
 - `models`: validation des entrées (types `SetInput`, `GetInput`, etc.)
-- `security`: cache IP anti-spam / anti-bruteforce
+- `security`: limiteur d’abus par IP (score décroissant, récupération dans le temps)
 
 ### Types (structures/enums)
 
@@ -67,7 +67,7 @@ Ces modules sont attendus dans `src/*.rs` et sont utilisés pour :
 - **`AppState`** (`pub(crate)`, `Clone`)
   - **Champs**
     - `db: db::Db`: couche DB.
-    - `ip_cache: security::IpCache`: anti-rejeu/anti-spam (fenêtre courte).
+    - `abuse_limiter: security::AbuseLimiter`: limiteur d’abus par IP (score x ∈ [0,16], 429 si x < 1).
     - `csrf: csrf::CsrfConfig`: config CSRF (cookie + champ attendu).
     - `trust_proxy: bool`: accepte `x-forwarded-for` si `true`.
   - **Rôle**: état partagé injecté dans les handlers Axum (`State<AppState>`).
@@ -88,7 +88,7 @@ Ces modules sont attendus dans `src/*.rs` et sont utilisés pour :
     - `APP_ADDR` (défaut `"0.0.0.0:3000"`) pour bind.
     - `TRUST_PROXY` (`"true"` active l’usage de `x-forwarded-for`).
     - CSRF via `csrf::CsrfConfig::from_env()`.
-    - Cache IP: `security::IpCache::new(Duration::from_secs(3))`.
+    - Limiteur d’abus: `security::AbuseLimiter::new(ttl)` avec `ABUSE_TTL_SECS` (défaut 86400) et une constante interne `c = 1.1`.
   - **Routes**
     - Static:
       - `/static/*` → `ServeDir("static")`
@@ -132,7 +132,7 @@ Le fichier gère aussi :
 
 - **Validation** via `crate::models` (ex: `SetInput`, `GetInput`)
 - **CSRF** pour les écritures (`/api/set`)
-- **Anti-rejeu / anti-spam** via `state.ip_cache.seen_recently(ip)` (fenêtre ~3s)
+- **Limitation d’abus par IP** via `state.abuse_limiter.check_or_update(ip)` (score x, 429 + Retry-After si x < 1)
 - **Logging** avec `tracing`
 - **Résolution IP client** via header `x-forwarded-for` si `TRUST_PROXY=true`
 
@@ -197,9 +197,9 @@ Types **publics** (utilisés par Axum pour le body JSON) :
   - **1) Vérif CSRF** (écriture)
     - `state.csrf.verify(&cookies, req.csrf.as_deref())`
     - En cas d’échec: `403 Forbidden` avec `{ ok:false, error:"Forbidden" }`.
-  - **2) IP client + anti-rejeu**
+  - **2) IP client + limiteur d’abus**
     - IP = `client_ip(&headers, addr, state.trust_proxy)`
-    - Si `state.ip_cache.seen_recently(ip)` → renvoie `429 { ok:false, error:"to many request" }` (court-circuit).
+    - Si `state.abuse_limiter.check_or_update(ip)` → `Err(retry_secs)` : renvoie `429` avec en-tête `Retry-After: <secs>` et `{ ok:false, error:"too many requests" }`.
   - **3) Validation**
     - `key_hash` doit être présent/non vide, sinon `400`.
     - `value` doit être présent, sinon `400`.
@@ -211,15 +211,15 @@ Types **publics** (utilisés par Axum pour le body JSON) :
     - `state.db.insert(&key, &value, ephemeral)` ; si erreur → `500`.
   - **Réponse**
     - `200 OK`: `{ ok:true }`
-    - `429`: `{ ok:false, error:"to many request" }`
+    - `429`: en-tête `Retry-After` (secondes), corps `{ ok:false, error:"too many requests" }`
     - `400/403/500`: selon cas ci-dessus.
 
 - **`api_get(State(state), headers, ConnectInfo(addr), Json(req)) -> Response`** (publique, async)
   - **1) IP client + log**
     - IP = `client_ip(...)`
     - Log `event="get"`, `ip` uniquement.
-  - **2) Anti-rejeu**
-    - Si `state.ip_cache.seen_recently(ip)` → renvoie `429 { found:false, error:"to many request" }`.
+  - **2) Limiteur d’abus**
+    - Si `state.abuse_limiter.check_or_update(ip)` → `Err(retry_secs)` : renvoie `429` avec `Retry-After` et `{ found:false, error:"too many requests" }`.
   - **3) Validation**
     - `hashes` requis et non vide, sinon `400`.
     - Max 256 hashes, sinon `400`.
@@ -235,7 +235,7 @@ Types **publics** (utilisés par Axum pour le body JSON) :
       - trouvé: `{ found:true, value:{ v, iv, ct }, ttl_secs, ephemeral }`
       - non trouvé: `{ found:false }`
     - `400/500`: validation / erreur interne.
-    - `429`: `{ found:false, error:"to many request" }`
+    - `429`: en-tête `Retry-After`, corps `{ found:false, error:"too many requests" }`
 
 - **`client_ip(headers: &HeaderMap, addr: SocketAddr, trust_proxy: bool) -> IpAddr`** (privée)
   - Si `trust_proxy=true`, tente `x-forwarded-for` (prend la **première** IP de la liste).
@@ -323,4 +323,24 @@ Toutes les fonctions ci-dessous retournent `anyhow::Result<...>` et ajoutent du 
   - `DELETE FROM entries WHERE created_at < now() - 24 hours`
   - `DELETE FROM salts WHERE created_at < now() - 25 hours`
   - Retourne `PurgeStats` avec `rows_affected()` pour chaque DELETE.
+
+---
+
+## `src/security.rs` — Limitation d’abus par IP
+
+### Rôle
+
+Chaque IP est associée à un score flottant **x** ∈ [0, 16]. À chaque requête :
+- **Mise à jour** : x ← (x/2) × c^dt (dt = temps en secondes depuis la dernière requête), puis x est borné dans [0, 16].
+- Si **x < 1** : la requête est refusée avec **429** et l’en-tête **Retry-After** (secondes) = (ln(2) − ln(x)) / ln(c). L’état n’est pas mis à jour.
+- Sinon : la requête est acceptée et le nouvel état (x, instant) est enregistré.
+
+Variables d’environnement :
+- **`ABUSE_TTL_SECS`** (défaut 86400) : TTL du cache ; après expiration l’IP est oubliée et repart à 16.
+- **Constante interne** : `c = 1.1` (non configurable par variable d’environnement).
+
+### Types
+
+- **`AbuseLimiter`** (`Clone`) : cache `IpAddr → (x, last_seen)` (moka), + constante `c`.
+- **`check_or_update(&self, ip: IpAddr) -> Result<(), u64>`** : `Ok(())` si autorisé (et mise à jour), `Err(retry_after_secs)` si 429 doit être renvoyé.
 

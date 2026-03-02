@@ -2,7 +2,7 @@ use std::net::{IpAddr, SocketAddr};
 
 use axum::{
     extract::{ConnectInfo, State},
-    http::{HeaderMap, StatusCode},
+    http::{header, HeaderMap, HeaderValue, StatusCode},
     response::{IntoResponse, Response},
     Json,
 };
@@ -85,6 +85,15 @@ fn json<T: Serialize>(status: StatusCode, payload: T) -> Response {
     (status, Json(payload)).into_response()
 }
 
+/// Réponse 429 avec en-tête Retry-After (secondes).
+fn json_429_retry<T: Serialize>(payload: T, retry_after_secs: u64) -> Response {
+    let mut headers = HeaderMap::new();
+    if let Ok(v) = HeaderValue::from_str(&retry_after_secs.to_string()) {
+        headers.insert(header::RETRY_AFTER, v);
+    }
+    (StatusCode::TOO_MANY_REQUESTS, headers, Json(payload)).into_response()
+}
+
 /// `GET /api/salts`
 ///
 /// Retourne la liste des sels valides (base64 URL-safe, sans padding) et assure la rotation.
@@ -149,13 +158,13 @@ pub async fn api_set(
     }
 
     let ip = client_ip(&headers, addr, state.trust_proxy);
-    if state.ip_cache.seen_recently(ip) {
-        return json(
-            StatusCode::TOO_MANY_REQUESTS,
+    if let Err(retry_after_secs) = state.abuse_limiter.check_or_update(ip) {
+        return json_429_retry(
             ApiOk {
                 ok: false,
-                error: Some("to many request".to_string()),
+                error: Some("too many requests".to_string()),
             },
+            retry_after_secs,
         );
     }
 
@@ -252,16 +261,16 @@ pub async fn api_get(
     // Log (ip only as requested)
     info!(event = "get", ip = %ip);
 
-    if state.ip_cache.seen_recently(ip) {
-        return json(
-            StatusCode::TOO_MANY_REQUESTS,
+    if let Err(retry_after_secs) = state.abuse_limiter.check_or_update(ip) {
+        return json_429_retry(
             ApiGetResponse {
                 found: false,
                 value: None,
                 ttl_secs: None,
                 ephemeral: None,
-                error: Some("to many request".to_string()),
+                error: Some("too many requests".to_string()),
             },
+            retry_after_secs,
         );
     }
 

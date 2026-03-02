@@ -44,11 +44,11 @@ enum Command {
 
 /// État partagé injecté dans les handlers Axum.
 ///
-/// Contient la DB, la config CSRF, le cache IP (anti-rejeu court) et le flag proxy.
+/// Contient la DB, la config CSRF, le limiteur d’abus par IP et le flag proxy.
 #[derive(Clone)]
 pub(crate) struct AppState {
     db: db::Db,
-    ip_cache: security::IpCache,
+    abuse_limiter: security::AbuseLimiter,
     csrf: csrf::CsrfConfig,
     trust_proxy: bool,
 }
@@ -112,11 +112,17 @@ async fn serve(db: db::Db, _log_guard: logging::LogGuard) -> anyhow::Result<()> 
         == "true";
 
     let csrf = csrf::CsrfConfig::from_env()?;
-    let ip_cache = security::IpCache::new(Duration::from_secs(3));
+    let abuse_ttl = Duration::from_secs(
+        std::env::var("ABUSE_TTL_SECS")
+            .ok()
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(86400),
+    );
+    let abuse_limiter = security::AbuseLimiter::new(abuse_ttl);
 
     let state = AppState {
         db,
-        ip_cache,
+        abuse_limiter,
         csrf,
         trust_proxy,
     };

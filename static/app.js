@@ -446,8 +446,8 @@
       body: JSON.stringify({ hashes })
     });
     if (!res.ok) {
-      if (res.status === 429 || (data && data.error === 'to many request')) {
-        showGetMessage('to many request');
+      if (res.status === 429 || (data && (data.error === 'too many requests' || data.error === 'to many request'))) {
+        showGetMessage('too many requests');
       } else {
         const msg = (data && data.error) ? data.error : ('HTTP ' + res.status);
         showGetMessage(msg);
@@ -538,8 +538,8 @@
     });
 
     if (!res.ok) {
-      if (res.status === 429 || (data && data.error === 'to many request')) {
-        showSetMessage('to many request');
+      if (res.status === 429 || (data && (data.error === 'too many requests' || data.error === 'to many request'))) {
+        showSetMessage('too many requests');
         setNetStatus('Prêt');
         return;
       }
@@ -554,8 +554,8 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ key, value, ephemeral, csrf: refreshed })
           });
-          if (retry.res.status === 429 || (retry.data && retry.data.error === 'to many request')) {
-            showSetMessage('to many request');
+          if (retry.res.status === 429 || (retry.data && (retry.data.error === 'too many requests' || retry.data.error === 'to many request'))) {
+            showSetMessage('too many requests');
             setNetStatus('Prêt');
             return;
           }

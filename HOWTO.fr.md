@@ -67,7 +67,7 @@ Au démarrage, les migrations SQL dans `migrations/` sont appliquées automatiqu
 - `POST /api/get` (JSON) → `{ "found": true, "value": { "v": 1, "iv": "...", "ct": "..." }, "ttl_secs": 123, "ephemeral": false }` ou `{ "found": false }`
   - Le navigateur envoie une liste de `hashes` (un par sel valide).
   - Le serveur ne voit jamais la clé en clair et ne renvoie que du chiffré.
-  - En cas de limitation par IP: `429` avec `{ "error": "to many request" }` (même message côté STORE et RETRIEVE).
+  - En cas de limitation par IP: `429` avec en-tête `Retry-After` (secondes à attendre) et `{ "error": "too many requests" }` (même message côté STORE et RETRIEVE).
 
 Exemple minimal (set):
 (la dérivation PBKDF2‑SHA256 (200k itérations) et le chiffrement AES‑GCM sont faits dans `static/app.js` via WebCrypto)
