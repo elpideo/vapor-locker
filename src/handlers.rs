@@ -80,6 +80,12 @@ struct ApiSaltsResponse {
     salts: Vec<String>,
 }
 
+/// Réponse JSON de `GET /api/version`.
+#[derive(Debug, Serialize)]
+struct ApiVersionResponse {
+    version: String,
+}
+
 /// Helper pour retourner une réponse JSON avec un status HTTP.
 fn json<T: Serialize>(status: StatusCode, payload: T) -> Response {
     (status, Json(payload)).into_response()
@@ -113,6 +119,18 @@ pub async fn api_salts(State(state): State<AppState>) -> Response {
 
     let salts_b64: Vec<String> = salts.into_iter().map(|s| URL_SAFE_NO_PAD.encode(s)).collect();
     json(StatusCode::OK, ApiSaltsResponse { salts: salts_b64 })
+}
+
+/// `GET /api/version`
+///
+/// Retourne la version de l'application, issue de `Cargo.toml`.
+pub async fn api_version() -> Response {
+    json(
+        StatusCode::OK,
+        ApiVersionResponse {
+            version: crate::version::APP_VERSION.to_string(),
+        },
+    )
 }
 
 /// `GET /api/csrf`

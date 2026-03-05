@@ -41,7 +41,7 @@ Au démarrage, les migrations SQL dans `migrations/` sont appliquées automatiqu
 ## Front (statique)
 
 - **Page unique (UI)**: `GET /` sert `static/index.html`
-- **Bouton GitHub** : icône en haut à droite, lien vers le dépôt source
+- **Bouton GitHub + version** : icône en haut à droite, lien vers le dépôt source, avec juste à côté un badge texte affichant `vX.Y.Z` (version de l’application récupérée via `/api/version`)
 - **Fichiers statiques**: `GET /static/*` (JS, etc.)
 - **Paramètre d'URL `key`** : si l'utilisateur arrive avec `?key=...` dans l'URL (ex. `https://vapor-locker.com?key=ma-cle`), la valeur est pré-remplie dans le champ Key de la section RETRIEVE.
 - **Section STORE** : ordre des champs — d'abord le champ **Key** (avec icône copier dans le champ et bouton pour générer une clé aléatoire), puis le champ **Value** (contenu / secret).
@@ -60,6 +60,8 @@ Au démarrage, les migrations SQL dans `migrations/` sont appliquées automatiqu
 - `GET /api/salts` → `{ "salts": ["..."] }`
   - Retourne les sels valides (créés dans les **25 dernières heures**), triés du plus récent au plus ancien.
   - Crée automatiquement un nouveau sel si le plus récent a plus de ~1h.
+- `GET /api/version` → `{ "version": "X.Y.Z" }`
+  - Retourne la version du binaire (issue de `Cargo.toml` via `CARGO_PKG_VERSION`), utilisée notamment pour le badge d’interface à côté du bouton GitHub.
 - `POST /api/set` (JSON) → `{ "ok": true }`
   - Le navigateur envoie uniquement:
     - `key_hash`: un hash dérivé de (clé + sel)

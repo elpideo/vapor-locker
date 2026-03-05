@@ -30,6 +30,7 @@
   const setStoredCountdown = $('setStoredCountdown');
   const keyRandomBtn = $('keyRandomBtn');
   const keyCopyBtn = $('keyCopyBtn');
+  const appVersionEl = $('appVersion');
 
   let csrfToken = null;
   let revealed = false;
@@ -367,6 +368,17 @@
     return salts;
   }
 
+  async function initVersionBadge() {
+    if (!appVersionEl) return;
+    try {
+      const { res, data } = await fetchJson('/api/version', { method: 'GET' });
+      if (!res.ok || !data || !data.version) return;
+      appVersionEl.textContent = 'v' + String(data.version);
+    } catch (e) {
+      // ignore errors: le badge de version est purement informatif
+    }
+  }
+
   revealBtn.addEventListener('click', () => {
     if (getValue.classList.contains('hidden')) return;
     if (!resultPlain.textContent) return;
@@ -616,6 +628,7 @@
   Promise.resolve()
     .then(() => ensureCsrf())
     .then(() => ensureSalts())
+    .then(() => initVersionBadge())
     .catch(() => setNetStatus('Prêt'));
 })();
 

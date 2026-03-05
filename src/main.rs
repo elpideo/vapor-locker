@@ -4,6 +4,7 @@ mod handlers;
 mod logging;
 mod models;
 mod security;
+mod version;
 
 use std::{net::SocketAddr, time::Duration};
 
@@ -120,6 +121,12 @@ async fn serve(db: db::Db, _log_guard: logging::LogGuard) -> anyhow::Result<()> 
     );
     let abuse_limiter = security::AbuseLimiter::new(abuse_ttl);
 
+    // Utilise un chemin absolu basé sur le répertoire du crate pour servir les
+    // assets statiques, afin d'éviter les 404 si le binaire est lancé depuis
+    // un répertoire de travail différent.
+    let static_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("static");
+    let index_html = static_root.join("index.html");
+
     let state = AppState {
         db,
         abuse_limiter,
@@ -128,12 +135,13 @@ async fn serve(db: db::Db, _log_guard: logging::LogGuard) -> anyhow::Result<()> 
     };
 
     let app = Router::new()
-        .nest_service("/static", ServeDir::new("static"))
-        .route_service("/", ServeFile::new("static/index.html"))
+        .nest_service("/static", ServeDir::new(static_root))
+        .route_service("/", ServeFile::new(index_html))
         .route("/api/csrf", get(handlers::api_csrf))
         .route("/api/salts", get(handlers::api_salts))
         .route("/api/get", post(handlers::api_get))
         .route("/api/set", post(handlers::api_set))
+        .route("/api/version", get(handlers::api_version))
         .layer(DefaultBodyLimit::max(250_000))
         .layer(CookieManagerLayer::new())
         .layer(
