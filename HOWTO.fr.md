@@ -64,6 +64,7 @@ Au démarrage, les migrations SQL dans `migrations/` sont appliquées automatiqu
   - Le navigateur envoie uniquement:
     - `key_hash`: un hash dérivé de (clé + sel)
     - `value`: une valeur **chiffrée** `{ v, iv, ct }` (AES‑GCM)
+  - Côté serveur, pour une même `key_hash`, une nouvelle écriture **écrase** systématiquement l’entrée précédente (la clé est unique côté base).
 - `POST /api/get` (JSON) → `{ "found": true, "value": { "v": 1, "iv": "...", "ct": "..." }, "ttl_secs": 123, "ephemeral": false }` ou `{ "found": false }`
   - Le navigateur envoie une liste de `hashes` (un par sel valide).
   - Le serveur ne voit jamais la clé en clair et ne renvoie que du chiffré.

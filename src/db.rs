@@ -73,10 +73,25 @@ impl Db {
         Ok(())
     }
 
-    /// Insère une nouvelle entrée.
+    /// Insère une entrée en écrasant toute entrée précédente pour la même clé.
     ///
     /// `value` est stockée telle quelle (payload chiffré sérialisé en JSON).
+    /// Si une entrée existe déjà pour `key_hash`, elle est supprimée puis remplacée.
     pub async fn insert(&self, key_hash: &str, value: &str, ephemeral: bool) -> anyhow::Result<()> {
+        let mut tx = self.pool.begin().await.context("begin insert tx")?;
+
+        // Garantit l'unicité logique par `key_hash` en supprimant les anciennes entrées.
+        sqlx::query(
+            r#"
+            DELETE FROM entries
+            WHERE key_hash = $1
+            "#,
+        )
+        .bind(key_hash)
+        .execute(&mut *tx)
+        .await
+        .context("delete existing entry by key_hash")?;
+
         sqlx::query(
             r#"
             INSERT INTO entries (key_hash, value, ephemeral)
@@ -86,9 +101,11 @@ impl Db {
         .bind(key_hash)
         .bind(value)
         .bind(ephemeral)
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await
         .context("insert entry")?;
+
+        tx.commit().await.context("commit insert tx")?;
         Ok(())
     }
 

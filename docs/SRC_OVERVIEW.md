@@ -294,7 +294,7 @@ Toutes les fonctions ci-dessous retournent `anyhow::Result<...>` et ajoutent du 
 
 - **`Db::insert(&self, key_hash: &str, value: &str, ephemeral: bool) -> anyhow::Result<()>`** (pub, async)
   - Insère dans `entries (key_hash, value, ephemeral)`.
-  - Ne retourne pas l’ID; simple write.
+  - Garantit qu’il n’existe **qu’une seule** entrée par `key_hash` en supprimant d’abord toute entrée existante pour cette clé, puis en insérant la nouvelle valeur (comportement “écrase l’ancienne valeur”).
 
 - **`Db::get_value_by_hashes_maybe_delete_ephemeral(&self, key_hashes: Vec<String>) -> anyhow::Result<Option<FoundEntry>>`** (pub, async)
   - **But**: retourner la **valeur la plus récente** (sur un ensemble de `key_hash`) et la supprimer si `ephemeral=true`.

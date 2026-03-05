@@ -49,9 +49,9 @@ impl SetInput {
             });
         }
         let value_len = self.value.chars().count();
-        if value_len > 100_000 {
+        if value_len > 500_000 {
             return Err(ValidationError::ValueTooLong {
-                max: 100_000,
+                max: 500_000,
                 got: value_len,
             });
         }
