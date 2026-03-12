@@ -54,12 +54,23 @@ pub(crate) struct AppState {
     trust_proxy: bool,
 }
 
-/// Point d’entrée.
+/// Point d’entrée du binaire `vapor`.
 ///
-/// - Charge `.env` si présent
-/// - Initialise le logging
-/// - Connecte la DB et exécute les migrations
-/// - Exécute la sous-commande (serve / purge)
+/// Cette fonction effectue l’initialisation globale du processus avant de
+/// déléguer à la sous-commande demandée :
+///
+/// - charge les variables d’environnement depuis `.env` si le fichier existe ;
+/// - parse la ligne de commande avec `clap` ;
+/// - initialise le logging structuré et conserve son garde-fou de durée de vie ;
+/// - ouvre la connexion à la base de données ;
+/// - applique les migrations SQL au démarrage ;
+/// - exécute ensuite `serve`, `purge once` ou `purge loop`.
+///
+/// # Errors
+///
+/// Retourne une erreur si l’initialisation du logging échoue, si la connexion
+/// ou les migrations de base de données échouent, ou si la sous-commande
+/// appelée retourne elle-même une erreur.
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     dotenvy::dotenv().ok();
@@ -99,7 +110,28 @@ async fn main() -> anyhow::Result<()> {
     }
 }
 
-/// Construit le routeur Axum et démarre le serveur HTTP.
+/// Construit l’application Axum puis démarre le serveur HTTP.
+///
+/// Cette fonction :
+///
+/// - lit l’adresse d’écoute depuis `APP_ADDR` (défaut : `0.0.0.0:3000`) ;
+/// - active ou non la confiance envers un proxy inverse via `TRUST_PROXY` ;
+/// - charge la configuration CSRF depuis l’environnement ;
+/// - crée le limiteur d’abus IP avec une durée de rétention issue de
+///   `ABUSE_TTL_SECS` ;
+/// - configure le service des fichiers statiques ;
+/// - enregistre les routes API et les middlewares Axum/Tower ;
+/// - lance l’écoute TCP puis sert les requêtes jusqu’au signal d’arrêt.
+///
+/// Le paramètre `_log_guard` est volontairement conservé jusqu’à la fin de vie
+/// du serveur afin de garantir que le backend de logging reste initialisé tant
+/// que le processus sert des requêtes.
+///
+/// # Errors
+///
+/// Retourne une erreur si l’adresse d’écoute est invalide, si la configuration
+/// CSRF ne peut pas être chargée, si le bind TCP échoue, ou si la boucle de
+/// service HTTP se termine sur une erreur.
 async fn serve(db: db::Db, _log_guard: logging::LogGuard) -> anyhow::Result<()> {
     info!(event = "serve_start", "building router and binding");
     let addr: SocketAddr = std::env::var("APP_ADDR")
@@ -163,7 +195,23 @@ async fn serve(db: db::Db, _log_guard: logging::LogGuard) -> anyhow::Result<()> 
     Ok(())
 }
 
-/// Purge en boucle les données expirées et dort `interval` entre deux passes.
+/// Exécute une purge périodique infinie des données expirées.
+///
+/// À chaque itération, la fonction supprime les entrées et sels expirés via la
+/// base de données, journalise le nombre d’éléments supprimés, puis attend la
+/// durée `interval` avant la passe suivante.
+///
+/// Cette boucle ne retourne normalement jamais en cas de fonctionnement
+/// nominal.
+///
+/// # Parameters
+///
+/// - `db` : handle de base de données utilisé pour lancer la purge.
+/// - `interval` : durée d’attente entre deux purges successives.
+///
+/// # Errors
+///
+/// Retourne une erreur si une opération de purge base de données échoue.
 async fn purge_loop(db: db::Db, interval: Duration) -> anyhow::Result<()> {
     loop {
         let stats = db.purge_expired().await.context("purge expired")?;
@@ -178,7 +226,11 @@ async fn purge_loop(db: db::Db, interval: Duration) -> anyhow::Result<()> {
     }
 }
 
-/// Signal d’arrêt “gracieux” (Ctrl-C).
+/// Attend un signal d’arrêt gracieux du processus.
+///
+/// Pour l’instant, seul `Ctrl-C` est pris en charge. Cette future est utilisée
+/// par `axum::serve(...).with_graceful_shutdown(...)` pour arrêter
+/// proprement le serveur HTTP sans couper brutalement les connexions en cours.
 async fn shutdown_signal() {
     let _ = tokio::signal::ctrl_c().await;
 }
