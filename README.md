@@ -23,6 +23,17 @@ The server never sees your secret or your encryption key.
 
 ---
 
+## 🔄 Vapor-Locker vs Snappass
+
+| Feature                | Snappass | Vapor-Locker |
+|------------------------|:--------:|:------------:|
+| Single-use secret      |    ✅     |      ✅       |
+| Expiration             |    ✅     |      ✅       |
+| Client-side encryption |    ❌     |      ✅       |
+| Zero-knowledge arch.   |    ❌     |      ✅       |
+
+---
+
 ## 🔐 How It Works
 
 1. The secret is encrypted in your browser.
@@ -152,7 +163,7 @@ Share a secret. Let it evaporate.
 
 ## 🖼 Interface (landing page)
 
-La page d’accueil (`static/index.html`) utilise un fond fixe en canvas : grille de petits carrés espacés sur fond noir. Un halo vert lumineux suit la souris (ou le doigt sur tactile) : seuls les carrés proches du pointeur s’illuminent en vert vif ; le reste reste dans le noir total.
+La page d’accueil (`static/index.html`) utilise un fond fixe en canvas : grille de petits carrés espacés sur fond noir. Un halo vert lumineux suit la souris (ou le doigt sur tactile) : seuls les carrés proches du pointeur s’illuminent en vert vif ; le reste reste dans le noir total. Le titre, le tagline principal et le sous-texte sont regroupés dans un médaillon arrondi au centre, sur fond noir semi-transparent (opacity 0.75) pour renforcer la lisibilité.
 
 ---
 

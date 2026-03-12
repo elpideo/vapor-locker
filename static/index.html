@@ -414,6 +414,64 @@
     }
     .tabPanel{display:none;}
     .tabPanel.is-active{display:block;}
+
+    .compareTable{
+      width:100%;
+      border-collapse:collapse;
+      font-size:14px;
+    }
+    .compareTable thead th{
+      padding:6px 10px 8px;
+      font-size:11px;
+      text-transform:uppercase;
+      letter-spacing:.16em;
+      color:var(--muted);
+      text-align:center;
+      border-bottom:1px solid rgba(255,255,255,.08);
+    }
+    .compareTable thead th:first-child{
+      text-align:left;
+    }
+    .compareTable tbody td{
+      padding:8px 10px;
+      border-bottom:1px solid rgba(255,255,255,.06);
+      vertical-align:middle;
+      text-align:center;
+    }
+    .compareTable tbody tr:last-child td{
+      border-bottom:0;
+    }
+    .compareTable tbody td:first-child{
+      color:var(--muted);
+      font-weight:550;
+      text-align:left;
+    }
+    .iconYes,
+    .iconNo{
+      display:inline-flex;
+      width:24px;
+      height:24px;
+      border-radius:999px;
+      align-items:center;
+      justify-content:center;
+    }
+    .iconYes{
+      background:rgba(104,255,182,.16);
+      color:var(--accent);
+    }
+    .iconNo{
+      background:rgba(255,78,110,.18);
+      color:#ff4e6e;
+    }
+
+    .heroBadge{
+      display:inline-block;
+      margin:0 auto;
+      margin-top:4px;
+      padding:20px 28px 22px;
+      border-radius:var(--radius);
+      background:rgba(0,0,0,.75);
+    }
   </style>
 </head>
 <body>
@@ -430,9 +488,11 @@
     <div class="stack">
       <header>
         <img src="/static/vapor_logo.png" alt="Vapor" class="brandLogo"/>
-        <div class="brand">VAPOR<span class="brandDot">-</span>LOCKER</div>
-        <p class="tagline">Secrets that evaporate. Not leak.</p>
-        <p class="taglineSub">Client-side encrypted.<br/>Zero-knowledge.<br/>Self-destructing.</p>
+        <div class="heroBadge">
+          <div class="brand">VAPOR<span class="brandDot">-</span>LOCKER</div>
+          <p class="tagline">Secrets that evaporate. Not leak.</p>
+          <p class="taglineSub">Client-side encrypted.<br/>Zero-knowledge.<br/>Self-destructing.</p>
+        </div>
       </header>
 
       <section class="card">
@@ -612,6 +672,93 @@
           <li>Built on standard primitives (Web Crypto API)</li>
           <li>Minimal attack surface</li>
         </ul>
+      </section>
+
+      <section class="card">
+        <div class="cardTitle">VAPOR-LOCKER vs SNAPPASS</div>
+        <div class="cardBody">
+          <table class="compareTable">
+            <thead>
+            <tr>
+              <th scope="col">Feature</th>
+              <th scope="col">Snappass</th>
+              <th scope="col">Vapor-Locker</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+              <td>Single-use secret</td>
+              <td>
+                <span class="iconYes" aria-label="Yes" title="Yes">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </span>
+              </td>
+              <td>
+                <span class="iconYes" aria-label="Yes" title="Yes">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </span>
+              </td>
+            </tr>
+            <tr>
+              <td>Expiration</td>
+              <td>
+                <span class="iconYes" aria-label="Yes" title="Yes">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </span>
+              </td>
+              <td>
+                <span class="iconYes" aria-label="Yes" title="Yes">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </span>
+              </td>
+            </tr>
+            <tr>
+              <td>Client-side encryption</td>
+              <td>
+                <span class="iconNo" aria-label="No" title="No">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  </svg>
+                </span>
+              </td>
+              <td>
+                <span class="iconYes" aria-label="Yes" title="Yes">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </span>
+              </td>
+            </tr>
+            <tr>
+              <td>Zero-knowledge architecture</td>
+              <td>
+                <span class="iconNo" aria-label="No" title="No">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  </svg>
+                </span>
+              </td>
+              <td>
+                <span class="iconYes" aria-label="Yes" title="Yes">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </span>
+              </td>
+            </tr>
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <section class="card">
