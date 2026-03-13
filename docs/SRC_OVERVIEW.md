@@ -183,6 +183,7 @@ Types **publics** (utilisés par Axum pour le body JSON) :
 - **`api_salts(State(state): State<AppState>) -> Response`** (publique, async)
   - **DB**: appelle `state.db.list_valid_salts_with_rotation()`.
   - **Encodage**: convertit chaque sel (`Vec<u8>`) en base64 URL-safe sans padding.
+  - **Cache**: la réponse est marquée comme **non-cachable** côté client (`Cache-Control: no-store, no-cache, must-revalidate`).
   - **Réponse**
     - `200 OK`: `{ salts: [...] }`
     - `500`: `{ ok: false, error: "Internal error: ..." }`

@@ -86,7 +86,7 @@ struct ApiVersionResponse {
     version: String,
 }
 
-/// Helper pour retourner une réponse JSON avec un status HTTP.
+/// Helper pour retourner une réponse JSON avec un status HTTP. 
 fn json<T: Serialize>(status: StatusCode, payload: T) -> Response {
     (status, Json(payload)).into_response()
 }
@@ -103,6 +103,7 @@ fn json_429_retry<T: Serialize>(payload: T, retry_after_secs: u64) -> Response {
 /// `GET /api/salts`
 ///
 /// Retourne la liste des sels valides (base64 URL-safe, sans padding) et assure la rotation.
+/// La réponse est explicitement marquée comme **non-cachable** côté client (`Cache-Control: no-store`).
 pub async fn api_salts(State(state): State<AppState>) -> Response {
     let salts = match state.db.list_valid_salts_with_rotation().await {
         Ok(v) => v,
@@ -118,7 +119,16 @@ pub async fn api_salts(State(state): State<AppState>) -> Response {
     };
 
     let salts_b64: Vec<String> = salts.into_iter().map(|s| URL_SAFE_NO_PAD.encode(s)).collect();
-    json(StatusCode::OK, ApiSaltsResponse { salts: salts_b64 })
+
+    let mut headers = HeaderMap::new();
+    headers.insert(
+        header::CACHE_CONTROL,
+        HeaderValue::from_static("no-store, no-cache, must-revalidate"),
+    );
+    headers.insert(header::PRAGMA, HeaderValue::from_static("no-cache"));
+    headers.insert(header::EXPIRES, HeaderValue::from_static("0"));
+
+    (StatusCode::OK, headers, Json(ApiSaltsResponse { salts: salts_b64 })).into_response()
 }
 
 /// `GET /api/version`
