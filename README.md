@@ -120,9 +120,11 @@ Always share the lookup key via a secure channel.
 
 ## 📦 Self-Hosting
 
-Coming soon.
+Vapor-Locker is a Rust + Axum service using `sqlx` for PostgreSQL access.
 
-A lightweight Docker edition will be available for teams who want full infrastructure control.
+The backend tracks stable Rust and library releases; core dependencies such as `sqlx` are kept up to date (currently `sqlx` 0.8.x and `sqlx-postgres` 0.8.x) to avoid deprecation warnings and upcoming compiler incompatibilities.
+
+> When upgrading dependencies, remember to rebuild the project (`cargo build`) and re-run your tests.
 
 ---
 
